@@ -5,6 +5,7 @@ import ArticleCard from '@/components/ArticleCard';
 import Sidebar from '@/components/Sidebar';
 import Pagination from '@/components/Pagination';
 import { POSTS_PER_PAGE, formatDate } from '@/lib/utils';
+import type { ArticleWithCategory } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,41 +14,54 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const page = Math.max(1, parseInt(sp.page || '1', 10) || 1);
   const cat = sp.cat || 'all';
 
-  const categories = await prisma.category.findMany({
-    orderBy: { name: 'asc' },
-    include: { _count: { select: { articles: true } } },
-  });
+  // DB error hone pe bhi page 500 nahi dega - friendly message dikhega
+  let categories: { name: string; slug: string; _count: { articles: number } }[] = [];
+  let articles: ArticleWithCategory[] = [];
+  let recent: ArticleWithCategory[] = [];
+  let popular: ArticleWithCategory[] = [];
+  let total = 0;
+  let dbError = false;
 
-  const where = {
-    status: 'PUBLISHED' as const,
-    ...(cat !== 'all' ? { category: { slug: cat } } : {}),
-  };
+  try {
+    categories = await prisma.category.findMany({
+      orderBy: { name: 'asc' },
+      include: { _count: { select: { articles: true } } },
+    });
 
-  const [articles, total] = await Promise.all([
-    prisma.article.findMany({
-      where,
-      include: { category: true, author: { select: { name: true } } },
-      orderBy: { publishedAt: 'desc' },
-      skip: (page - 1) * POSTS_PER_PAGE,
-      take: POSTS_PER_PAGE,
-    }),
-    prisma.article.count({ where }),
-  ]);
+    const where = {
+      status: 'PUBLISHED' as const,
+      ...(cat !== 'all' ? { category: { slug: cat } } : {}),
+    };
 
-  const [recent, popular] = await Promise.all([
-    prisma.article.findMany({
-      where: { status: 'PUBLISHED' },
-      include: { category: true },
-      orderBy: { publishedAt: 'desc' },
-      take: 5,
-    }),
-    prisma.article.findMany({
-      where: { status: 'PUBLISHED' },
-      include: { category: true },
-      orderBy: { viewCount: 'desc' },
-      take: 5,
-    }),
-  ]);
+    [articles, total] = await Promise.all([
+      prisma.article.findMany({
+        where,
+        include: { category: true, author: { select: { name: true } } },
+        orderBy: { publishedAt: 'desc' },
+        skip: (page - 1) * POSTS_PER_PAGE,
+        take: POSTS_PER_PAGE,
+      }),
+      prisma.article.count({ where }),
+    ]);
+
+    [recent, popular] = await Promise.all([
+      prisma.article.findMany({
+        where: { status: 'PUBLISHED' },
+        include: { category: true },
+        orderBy: { publishedAt: 'desc' },
+        take: 5,
+      }),
+      prisma.article.findMany({
+        where: { status: 'PUBLISHED' },
+        include: { category: true },
+        orderBy: { viewCount: 'desc' },
+        take: 5,
+      }),
+    ]);
+  } catch (e) {
+    dbError = true;
+    console.error('DB error on homepage:', e);
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / POSTS_PER_PAGE));
 
@@ -59,7 +73,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <h2 className="section-title">📝 Latest Articles</h2>
           <CategoryFilter />
 
-          {articles.length === 0 ? (
+          {dbError ? (
+            <div className="category-empty" style={{ display: 'block' }}>
+              <p>⚠️ Database se connect nahi ho paya — thodi der baad refresh karo.</p>
+              <p style={{ fontSize: '0.8rem' }}>(Supabase project running hai? Database URL sahi hai? — Vercel env vars check karo)</p>
+            </div>
+          ) : articles.length === 0 ? (
             <div className="category-empty" style={{ display: 'block' }}>
               <p>😕 Is category mein abhi koi post nahi hai.</p>
               <p>
@@ -74,24 +93,26 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             articles.map((a) => <ArticleCard key={a.id} article={a} />)
           )}
 
-          <Pagination page={page} totalPages={totalPages} basePath="/" />
+          {!dbError && <Pagination page={page} totalPages={totalPages} basePath="/" />}
         </main>
 
-        <Sidebar
-          categories={categories}
-          recent={recent.map((p) => ({
-            title: p.title,
-            slug: p.slug,
-            categorySlug: p.category?.slug || 'uncategorized',
-            date: formatDate(p.publishedAt || p.createdAt),
-          }))}
-          popular={popular.map((p) => ({
-            title: p.title,
-            slug: p.slug,
-            categorySlug: p.category?.slug || 'uncategorized',
-            views: p.viewCount,
-          }))}
-        />
+        {!dbError && (
+          <Sidebar
+            categories={categories}
+            recent={recent.map((p) => ({
+              title: p.title,
+              slug: p.slug,
+              categorySlug: p.category?.slug || 'uncategorized',
+              date: formatDate(p.publishedAt || p.createdAt),
+            }))}
+            popular={popular.map((p) => ({
+              title: p.title,
+              slug: p.slug,
+              categorySlug: p.category?.slug || 'uncategorized',
+              views: p.viewCount,
+            }))}
+          />
+        )}
       </div>
     </>
   );

@@ -12,7 +12,9 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const q = (sp.q || '').trim();
 
   let articles: ArticleWithCategory[] = [];
+  let dbError = false;
   if (q) {
+    try {
     articles = await prisma.article.findMany({
       where: {
         status: 'PUBLISHED',
@@ -26,6 +28,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       orderBy: { publishedAt: 'desc' },
       take: 50,
     });
+    } catch (e) { dbError = true; console.error('DB error search:', e); }
   }
 
   return (
@@ -49,7 +52,12 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           </div>
         </form>
 
-        {q && articles.length === 0 && (
+        {dbError && (
+          <div className="category-empty" style={{ display: 'block' }}>
+            <p>⚠️ Database se connect nahi ho paya — thodi der baad try karo.</p>
+          </div>
+        )}
+        {q && !dbError && articles.length === 0 && (
           <div className="category-empty" style={{ display: 'block' }}>
             <p>😕 "{q}" ke liye kuch nahi mila.</p>
             <p>Kisi aur keyword se try karo — SQL, Python, Power BI, Excel...</p>

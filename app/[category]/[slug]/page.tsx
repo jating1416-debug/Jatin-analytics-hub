@@ -31,10 +31,28 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
 export default async function ArticlePage({ params }: { params: Promise<{ category: string; slug: string }> }) {
   const { slug } = await params;
 
-  const post = await prisma.article.findUnique({
-    where: { slug },
-    include: { category: true, author: { select: { name: true } } },
-  });
+  let post: Awaited<ReturnType<typeof prisma.article.findUnique>> = null;
+  let dbError = false;
+  try {
+    post = await prisma.article.findUnique({
+      where: { slug },
+      include: { category: true, author: { select: { name: true } } },
+    });
+  } catch (e) {
+    dbError = true;
+    console.error('DB error article page:', e);
+  }
+  if (dbError) {
+    return (
+      <div className="layout-wrapper">
+        <main className="posts-section">
+          <div className="category-empty" style={{ display: 'block' }}>
+            <p>⚠️ Database se connect nahi ho paya — thodi der baad refresh karo.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
   if (!post || post.status !== 'PUBLISHED') notFound();
 
   // increment view count (fire and forget)

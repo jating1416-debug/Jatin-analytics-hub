@@ -28,16 +28,26 @@ export default async function CategoryPage({ params, searchParams }: { params: P
   if (!cat) notFound();
 
   const where = { status: 'PUBLISHED' as const, categoryId: cat.id };
-  const [articles, total] = await Promise.all([
-    prisma.article.findMany({
-      where,
-      include: { category: true, author: { select: { name: true } } },
-      orderBy: { publishedAt: 'desc' },
-      skip: (page - 1) * POSTS_PER_PAGE,
-      take: POSTS_PER_PAGE,
-    }),
-    prisma.article.count({ where }),
-  ]);
+  let articles: Awaited<ReturnType<typeof prisma.article.findMany>> = [];
+  let total = 0;
+  let dbError = false;
+  try {
+    const [arts, cnt] = await Promise.all([
+      prisma.article.findMany({
+        where,
+        include: { category: true, author: { select: { name: true } } },
+        orderBy: { publishedAt: 'desc' },
+        skip: (page - 1) * POSTS_PER_PAGE,
+        take: POSTS_PER_PAGE,
+      }),
+      prisma.article.count({ where }),
+    ]);
+    articles = arts;
+    total = cnt;
+  } catch (e) {
+    dbError = true;
+    console.error('DB error category page:', e);
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / POSTS_PER_PAGE));
   const label = CATEGORY_LABELS[slug] || cat.name;
@@ -46,7 +56,11 @@ export default async function CategoryPage({ params, searchParams }: { params: P
     <div className="layout-wrapper">
       <main className="posts-section">
         <h2 className="section-title">📁 {label} — {total} Posts</h2>
-        {articles.length === 0 ? (
+        {dbError ? (
+          <div className="category-empty" style={{ display: 'block' }}>
+            <p>⚠️ Database se connect nahi ho paya — thodi der baad refresh karo.</p>
+          </div>
+        ) : articles.length === 0 ? (
           <div className="category-empty" style={{ display: 'block' }}>
             <p>😕 Is category mein abhi koi post nahi hai.</p>
             <p>Jald hi naye posts aa rahi hain!</p>
@@ -54,7 +68,7 @@ export default async function CategoryPage({ params, searchParams }: { params: P
         ) : (
           articles.map((a) => <ArticleCard key={a.id} article={a} />)
         )}
-        <Pagination page={page} totalPages={totalPages} basePath={`/category/${slug}`} />
+        {!dbError && <Pagination page={page} totalPages={totalPages} basePath={`/category/${slug}`} />}
       </main>
     </div>
   );
