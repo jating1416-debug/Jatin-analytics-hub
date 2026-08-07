@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import ArticleCard from '@/components/ArticleCard';
+import type { ArticleWithCategory } from '@/lib/types';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const sp = await searchParams;
   const q = (sp.q || '').trim();
 
-  let articles: Awaited<ReturnType<typeof prisma.article.findMany>> = [];
+  let articles: ArticleWithCategory[] = [];
   if (q) {
     articles = await prisma.article.findMany({
       where: {
