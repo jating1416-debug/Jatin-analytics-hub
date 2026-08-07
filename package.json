@@ -9,7 +9,8 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "import:feed": "tsx scripts/import-feed.ts",
-    "import:json": "tsx scripts/import-json.ts"
+    "import:json": "tsx scripts/import-json.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
