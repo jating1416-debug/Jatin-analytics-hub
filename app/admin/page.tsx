@@ -9,18 +9,17 @@ export default async function AdminDashboard() {
   let dbError = false;
 
   try {
-    const [total, published, drafts, views, categories, recentArts] = await Promise.all([
-      prisma.article.count(),
-      prisma.article.count({ where: { status: 'PUBLISHED' } }),
-      prisma.article.count({ where: { status: 'DRAFT' } }),
-      prisma.article.aggregate({ _sum: { viewCount: true } }),
-      prisma.category.count(),
-      prisma.article.findMany({
-        include: { category: true },
-        orderBy: { updatedAt: 'desc' },
-        take: 5,
-      }),
-    ]);
+    // sequential - pool pressure kam (connection_limit ke saath safe)
+    const total = await prisma.article.count();
+    const published = await prisma.article.count({ where: { status: 'PUBLISHED' } });
+    const drafts = await prisma.article.count({ where: { status: 'DRAFT' } });
+    const views = await prisma.article.aggregate({ _sum: { viewCount: true } });
+    const categories = await prisma.category.count();
+    const recentArts = await prisma.article.findMany({
+      include: { category: true },
+      orderBy: { updatedAt: 'desc' },
+      take: 5,
+    });
     stats = { total, published, drafts, views: views._sum.viewCount || 0, categories };
     recent = recentArts;
   } catch (e) {

@@ -66,6 +66,7 @@ model Article {
   publishedAt     DateTime?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+  comments        Comment[]
 
   @@index([slug])
   @@index([categoryId, status, publishedAt])
@@ -128,6 +129,18 @@ model Tool {
   category    String
   usageCount  Int      @default(0)
   isActive    Boolean  @default(true)
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  articleId Int
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  name      String
+  content   String   @db.Text
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([articleId])
 }
 
 model PageView {

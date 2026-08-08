@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+// TABLE OF CONTENTS - article ke LEFT column mein sticky
+// (Blogger wale theme jaisa - content ke sath scroll karta hai)
 export default function TableOfContents({ html }: { html: string }) {
   const [headings, setHeadings] = useState<{ id: string; text: string; level: number }[]>([]);
 
@@ -22,7 +24,7 @@ export default function TableOfContents({ html }: { html: string }) {
   if (headings.length < 2) return null;
 
   return (
-    <div className="floating-toc" id="floating-toc" style={{ display: 'block' }}>
+    <div className="toc-sidebar" id="floating-toc">
       <div className="toc-title">📑 On This Page</div>
       <ul>
         {headings.map((h, i) => (

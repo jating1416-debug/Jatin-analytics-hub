@@ -110,6 +110,30 @@ export default function Navbar() {
         </ul>
 
         <button
+          onClick={() => window.dispatchEvent(new CustomEvent('open-cheatsheet'))}
+          style={{
+            background: 'var(--gradient)', color: '#fff', border: 'none', padding: '8px 14px',
+            borderRadius: 20, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0,
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}
+          title="Cheat Sheet (Ctrl+Shift+C)"
+        >
+          <i className="fas fa-code" /> Cheat Sheet
+        </button>
+
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('open-productivity-hub'))}
+          style={{
+            background: 'var(--bg)', color: 'var(--text-dark)', border: '1px solid var(--border)',
+            padding: '8px 14px', borderRadius: 20, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
+            flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
+          }}
+          title="Productivity Hub"
+        >
+          <i className="fas fa-bolt" /> Hub
+        </button>
+
+        <button
           className="dark-mode-toggle"
           onClick={toggleDark}
           title="Toggle Dark Mode"

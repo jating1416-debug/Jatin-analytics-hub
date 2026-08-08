@@ -116,8 +116,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
         categoryUrl={post.category ? `${SITE_URL}/category/${post.category.slug}` : undefined}
         authorName={post.author?.name || 'Jatin Kumar'}
       />
-      <TableOfContents html={post.content} />
-      <div className="layout-wrapper">
+      <div className="layout-wrapper toc-3col">
+        <TableOfContents html={post.content} />
         <main className="posts-section">
           <div className="post-content-wrapper">
             <div style={{ fontSize: '0.82rem', color: 'var(--text-light)', marginBottom: 12 }}>

@@ -49,6 +49,8 @@ export default function Footer() {
           <h4>Quick Links</h4>
           <ul className="footer-links">
             <li><Link href="/tools">🛠️ All Tools</Link></li>
+            <li><Link href="/archive">🗓️ Archive</Link></li>
+            <li><Link href="/contact">📬 Contact</Link></li>
             <li><Link href="/search">🔍 Search</Link></li>
             <li><a href="https://jatinanalytics.co.in" target="_blank" rel="noopener">Portfolio</a></li>
             <li><a href="https://kaggle.com/jatinkhandelwal112" target="_blank" rel="noopener">Kaggle</a></li>

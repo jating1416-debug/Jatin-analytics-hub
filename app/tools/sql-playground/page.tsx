@@ -32,6 +32,17 @@ export default function SqlPlayground() {
   const [error, setError] = useState('');
   const [time, setTime] = useState<number | null>(null);
 
+  // Try in Playground se aayi query auto-load
+  useEffect(() => {
+    try {
+      const draft = localStorage.getItem('di_sql_draft');
+      if (draft) {
+        setSql(draft);
+        localStorage.removeItem('di_sql_draft');
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     let mounted = true;
     async function load() {
@@ -41,7 +52,24 @@ export default function SqlPlayground() {
         const SQL = await initSqlJs({ locateFile: (f: string) => SQL_CDN + f });
         const database = new SQL.Database();
         SETUP.forEach((q) => database.run(q));
-        if (mounted) { setDb(database); setLoading(false); }
+        if (mounted) {
+          setDb(database);
+          setLoading(false);
+          // agar draft se aayi query hai to auto-run
+          try {
+            const draft = localStorage.getItem('di_sql_draft_auto');
+            if (draft) {
+              localStorage.removeItem('di_sql_draft_auto');
+              const res = database.exec(draft);
+              if (res.length) {
+                setResult(res.map((r: any) => ({ columns: r.columns, values: r.values })));
+              } else {
+                setResult([]);
+              }
+              setSql(draft);
+            }
+          } catch {}
+        }
       } catch (e: any) {
         if (mounted) { setError('SQL engine load fail: ' + e.message); setLoading(false); }
       }
