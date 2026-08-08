@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-// SMOOTH POST LIST - filter tabs + posts, sab client-side (bina page reload)
-// Blogger wale theme jaisa smooth - instant tab switching
+// INSTANT SMOOTH FILTER - saari posts EK BAAR fetch, tab click pe LOCAL filter
+// (koi server call nahi - turant switching, Blogger jaisa smooth)
+// + PREMIUM cards (gradient thumb strip, category icon, hover glow)
 
 const FILTERS = [
   { key: 'all', label: 'All' },
@@ -18,6 +19,20 @@ const FILTERS = [
   { key: 'error', label: 'error' },
 ];
 
+// category → icon (thumb strip ke liye)
+const CAT_ICONS: Record<string, string> = {
+  sql: '🗄️',
+  mysql: '🗄️',
+  python: '🐍',
+  'power-bi': '📈',
+  excel: '📗',
+  career: '💼',
+  'interview-questions': '🎯',
+  'case-study': '📁',
+  uncategorized: '📝',
+};
+const CAT_ICON = (slug: string | null | undefined) => CAT_ICONS[slug || ''] || '📝';
+
 type Post = {
   id: number;
   title: string;
@@ -30,54 +45,71 @@ type Post = {
   author: { name: string } | null;
 };
 
-type ApiData = {
-  posts: Post[];
-  total: number;
-  totalPages: number;
-  page: number;
-  counts: Record<string, number>;
-};
+const PAGE_SIZE = 10;
 
 function formatDate(d: string | null): string {
   if (!d) return '';
-  try {
-    return new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  } catch {
-    return '';
-  }
+  try { return new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); }
+  catch { return ''; }
 }
 
 export default function PostList() {
+  const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [cat, setCat] = useState('all');
   const [page, setPage] = useState(1);
-  const [data, setData] = useState<ApiData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // EK BAAR fetch - saari posts summaries
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError('');
-    fetch(`/api/posts?cat=${encodeURIComponent(cat)}&page=${page}`)
+    fetch('/api/posts?all=1')
       .then((r) => r.json())
-      .then((d) => { if (!cancelled) setData(d); })
-      .catch(() => { if (!cancelled) { setError('Load fail'); setData(null); } })
+      .then((d) => { if (!cancelled) { setAllPosts(d.posts || []); } })
+      .catch(() => { if (!cancelled) setError('Load fail'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [cat, page]);
+  }, []);
+
+  // ---------- LOCAL FILTER (instant!) ----------
+  const filtered = useMemo(() => {
+    if (cat === 'all') return allPosts;
+    if (cat === 'error') {
+      // sirf title/excerpt mein 'error' - mixed content nahi
+      return allPosts.filter((p) =>
+        (p.title || '').toLowerCase().includes('error') ||
+        (p.excerpt || '').toLowerCase().includes('error')
+      );
+    }
+    return allPosts.filter((p) => p.category?.slug === cat);
+  }, [allPosts, cat]);
+
+  // counts - local
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: allPosts.length };
+    FILTERS.slice(1).forEach((f) => {
+      if (f.key === 'error') {
+        c[f.key] = allPosts.filter((p) =>
+          (p.title || '').toLowerCase().includes('error') ||
+          (p.excerpt || '').toLowerCase().includes('error')
+        ).length;
+      } else {
+        c[f.key] = allPosts.filter((p) => p.category?.slug === f.key).length;
+      }
+    });
+    return c;
+  }, [allPosts]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagePosts = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const onFilter = (key: string) => {
     setCat(key);
     setPage(1);
-    // smooth scroll to top of list
     const el = document.getElementById('post-list-anchor');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
-
-  const posts = data?.posts || [];
-  const total = data?.total || 0;
-  const totalPages = data?.totalPages || 1;
-  const counts = data?.counts || {};
 
   return (
     <div id="post-list-anchor">
@@ -91,7 +123,7 @@ export default function PostList() {
               type="button"
               className={`filter-tag-btn${isActive ? ' active' : ''}`}
               onClick={() => onFilter(f.key)}
-              style={{ transition: 'all 0.2s ease' }}
+              style={{ transition: 'all 0.15s ease' }}
             >
               {f.label}
               <span
@@ -109,55 +141,60 @@ export default function PostList() {
         })}
       </div>
 
-      {/* Loading skeleton */}
+      {/* SHIMMER SKELETONS */}
       {loading && (
         <div>
           {[1, 2, 3].map((i) => (
-            <div key={i} className="post-card" style={{ opacity: 0.6 }}>
+            <div key={i} className="post-card" style={{ marginBottom: 24 }}>
+              <div className="skel" style={{ height: 100, borderRadius: '18px 18px 0 0' }} />
               <div className="post-body">
-                <div style={{ height: 14, width: '40%', background: 'var(--border)', borderRadius: 6, marginBottom: 10 }} />
-                <div style={{ height: 20, width: '80%', background: 'var(--border)', borderRadius: 6, marginBottom: 10 }} />
-                <div style={{ height: 12, width: '100%', background: 'var(--border)', borderRadius: 6, marginBottom: 6 }} />
-                <div style={{ height: 12, width: '70%', background: 'var(--border)', borderRadius: 6 }} />
+                <div className="skel" style={{ height: 14, width: '40%', marginBottom: 12 }} />
+                <div className="skel" style={{ height: 22, width: '80%', marginBottom: 12 }} />
+                <div className="skel" style={{ height: 12, width: '100%', marginBottom: 8 }} />
+                <div className="skel" style={{ height: 12, width: '65%' }} />
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Error */}
       {!loading && error && (
         <div className="category-empty" style={{ display: 'block' }}>
-          <p>⚠️ Posts load nahi ho payi — thodi der baad refresh karo.</p>
+          <p>⚠️ Posts load nahi ho payi — refresh karo.</p>
         </div>
       )}
 
-      {/* Empty */}
-      {!loading && !error && posts.length === 0 && (
+      {!loading && !error && pagePosts.length === 0 && (
         <div className="category-empty" style={{ display: 'block' }}>
           <p>😕 Is category mein abhi koi post nahi hai.</p>
-          <p>Jald hi naye posts aa rahi hain!</p>
         </div>
       )}
 
-      {/* Posts with fade-in */}
-      {!loading && !error && posts.length > 0 && (
+      {!loading && !error && pagePosts.length > 0 && (
         <div>
-          {posts.map((p, i) => (
+          {pagePosts.map((p, i) => (
             <div
               key={p.id}
-              className="post-card"
+              className="post-card reveal"
               style={{ animation: `fadeSlide 0.3s ease ${Math.min(i * 0.05, 0.3)}s backwards` }}
             >
               <style>{`@keyframes fadeSlide { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+              {/* PREMIUM THUMB STRIP - gradient + category icon */}
+              <Link href={`/${p.category?.slug || 'post'}/${p.slug}`} className="post-thumb-strip" aria-label={p.title}>
+                <span className="post-category-badge">
+                  {p.category?.name || 'Article'}
+                </span>
+                <span className="post-thumb-icon">{CAT_ICON(p.category?.slug)}</span>
+                <span className="thumb-arrow"><i className="fas fa-arrow-right" /></span>
+              </Link>
+
               <div className="post-body">
                 <div className="post-meta">
                   <span><i className="fas fa-calendar-alt" /> {formatDate(p.publishedAt || p.createdAt)}</span>
                   <span><i className="fas fa-user" /> {p.author?.name || 'Jatin Kumar'}</span>
                 </div>
                 <div className="reading-time" title="Reading time">
-                  <i className="fas fa-clock" />
-                  <span>{p.readingTime || 3} min read</span>
+                  <i className="fas fa-clock" /><span>{p.readingTime || 3} min read</span>
                 </div>
                 <div className="post-title">
                   <Link href={`/${p.category?.slug || 'post'}/${p.slug}`}>{p.title}</Link>
@@ -165,9 +202,7 @@ export default function PostList() {
                 {p.excerpt && <div className="post-snippet">{p.excerpt}</div>}
                 <div className="post-footer">
                   <div className="post-tags">
-                    {p.category && (
-                      <Link className="post-tag" href={`/category/${p.category.slug}`}>{p.category.name}</Link>
-                    )}
+                    {p.category && <Link className="post-tag" href={`/category/${p.category.slug}`}>{p.category.name}</Link>}
                   </div>
                   <Link className="read-more-btn" href={`/${p.category?.slug || 'post'}/${p.slug}`}>
                     Read More <i className="fas fa-arrow-right" />
@@ -177,19 +212,18 @@ export default function PostList() {
             </div>
           ))}
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: 10, margin: '30px 0', flexWrap: 'wrap' }}>
-              {page > 1 && (
-                <button onClick={() => setPage(page - 1)} className="cta-btn-outline" style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dark)', padding: '10px 20px', borderRadius: 20, cursor: 'pointer', fontWeight: 600 }}>
+              {safePage > 1 && (
+                <button onClick={() => setPage(safePage - 1)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dark)', padding: '10px 20px', borderRadius: 20, cursor: 'pointer', fontWeight: 600 }}>
                   <i className="fas fa-arrow-left" /> Newer
                 </button>
               )}
               <span style={{ alignSelf: 'center', fontSize: '0.85rem', color: 'var(--text-light)', fontWeight: 600 }}>
-                Page {page} / {totalPages} ({total} posts)
+                Page {safePage} / {totalPages} ({filtered.length} posts)
               </span>
-              {page < totalPages && (
-                <button onClick={() => setPage(page + 1)} className="cta-btn-outline" style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dark)', padding: '10px 20px', borderRadius: 20, cursor: 'pointer', fontWeight: 600 }}>
+              {safePage < totalPages && (
+                <button onClick={() => setPage(safePage + 1)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dark)', padding: '10px 20px', borderRadius: 20, cursor: 'pointer', fontWeight: 600 }}>
                   Older <i className="fas fa-arrow-right" />
                 </button>
               )}

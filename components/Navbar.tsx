@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import LanguageToggle from '@/components/LanguageToggle';
 
 const NAV_ITEMS = [
   { href: '/?cat=sql', label: '📊 SQL' },
@@ -17,18 +18,19 @@ export default function Navbar() {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<{ title: string; url: string }[]>([]);
   const [showSuggest, setShowSuggest] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('di_theme') === 'dark';
     setDark(saved);
-    document.documentElement.classList.toggle('dark-mode', saved);
+    document.body.classList.toggle('dark-mode', saved);
   }, []);
 
   const toggleDark = () => {
     const next = !dark;
     setDark(next);
     localStorage.setItem('di_theme', next ? 'dark' : 'light');
-    document.documentElement.classList.toggle('dark-mode', next);
+    document.body.classList.toggle('dark-mode', next);
   };
 
   // LIVE SEARCH - type karte hi suggestions (server pe /api/search)
@@ -54,8 +56,11 @@ export default function Navbar() {
   return (
     <nav className="navbar">
       <div className="navbar-inner">
-        <Link className="nav-logo" href="/">
-          {'<DataInsights />'}
+        <Link className="nav-logo" href="/" onClick={() => setMenuOpen(false)}>
+          <span className="nav-logo-badge">
+            <i className="fas fa-chart-line" />
+          </span>
+          <span className="nav-logo-text">&lt;DataInsights /&gt;</span>
         </Link>
 
         <div className="nav-center" style={{ position: 'relative' }}>
@@ -78,14 +83,16 @@ export default function Navbar() {
             <div style={{
               position: 'absolute', top: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
               width: 'min(420px, 90vw)', background: 'var(--card-bg)', border: '1px solid var(--border)',
-              borderRadius: 14, boxShadow: '0 18px 45px rgba(2,6,23,0.18)', zIndex: 1000, padding: 8, textAlign: 'left',
+              borderRadius: 16, boxShadow: '0 18px 45px rgba(2,6,23,0.18)', zIndex: 1000, padding: 8, textAlign: 'left',
             }}>
               {suggestions.map((s) => (
                 <a
                   key={s.url}
                   href={s.url}
-                  style={{ display: 'block', padding: '9px 12px', borderRadius: 10, color: 'var(--text-dark)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}
+                  style={{ display: 'block', padding: '10px 12px', borderRadius: 10, color: 'var(--text-dark)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600, transition: 'background 0.15s ease' }}
                   onMouseDown={(e) => e.preventDefault()}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--gradient-soft)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                 >
                   {s.title}
                 </a>
@@ -94,14 +101,14 @@ export default function Navbar() {
           )}
         </div>
 
-        <ul className="nav-links">
-          <li><Link href="/">🏠 Home</Link></li>
+        <ul className={`nav-links${menuOpen ? ' open' : ''}`}>
+          <li><Link href="/" onClick={() => setMenuOpen(false)}>🏠 Home</Link></li>
           {NAV_ITEMS.map((item) => (
             <li key={item.href}>
-              <Link href={item.href}>{item.label}</Link>
+              <Link href={item.href} onClick={() => setMenuOpen(false)}>{item.label}</Link>
             </li>
           ))}
-          <li><Link href="/downloads">📥 Downloads</Link></li>
+          <li><Link href="/downloads" onClick={() => setMenuOpen(false)}>📥 Downloads</Link></li>
           <li>
             <a className="nav-portfolio-btn" href="https://jatinanalytics.co.in" target="_blank" rel="noopener">
               🚀 My Portfolio
@@ -110,28 +117,23 @@ export default function Navbar() {
         </ul>
 
         <button
+          className="cs-navbar-btn"
           onClick={() => window.dispatchEvent(new CustomEvent('open-cheatsheet'))}
-          style={{
-            background: 'var(--gradient)', color: '#fff', border: 'none', padding: '8px 14px',
-            borderRadius: 20, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0,
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}
           title="Cheat Sheet (Ctrl+Shift+C)"
         >
-          <i className="fas fa-code" /> Cheat Sheet
+          <i className="fas fa-code" /> <span>Cheat Sheet</span>
         </button>
 
         <button
+          className="cs-navbar-btn hub-btn-text"
           onClick={() => window.dispatchEvent(new CustomEvent('open-productivity-hub'))}
-          style={{
-            background: 'var(--bg)', color: 'var(--text-dark)', border: '1px solid var(--border)',
-            padding: '8px 14px', borderRadius: 20, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
-            flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
-          }}
+          style={{ background: 'var(--bg)', color: 'var(--text-dark)', border: '1px solid var(--border)' }}
           title="Productivity Hub"
         >
-          <i className="fas fa-bolt" /> Hub
+          <i className="fas fa-bolt" /> <span>Hub</span>
         </button>
+
+        <LanguageToggle />
 
         <button
           className="dark-mode-toggle"
@@ -140,6 +142,15 @@ export default function Navbar() {
           aria-label="Toggle dark mode"
         >
           <i className={dark ? 'fas fa-sun' : 'fas fa-moon'} />
+        </button>
+
+        <button
+          className={`nav-toggle${menuOpen ? ' open' : ''}`}
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Menu"
+          title="Menu"
+        >
+          <i className={`fas ${menuOpen ? 'fa-xmark' : 'fa-bars'}`} />
         </button>
       </div>
     </nav>

@@ -12,6 +12,7 @@ import CodeHighlighter from '@/components/CodeHighlighter';
 import ImageLightbox from '@/components/ImageLightbox';
 import KonamiCode from '@/components/KonamiCode';
 import ReadingHistory from '@/components/ReadingHistory';
+import PremiumFX from '@/components/PremiumFX';
 import { SITE_NAME, SITE_DESC, SITE_URL } from '@/lib/utils';
 import './globals.css';
 
@@ -44,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&family=Fira+Code:wght@400;500&display=swap"
           rel="stylesheet"
         />
         <link
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ReadingProgress />
+        <PremiumFX />
         <Navbar />
         {children}
         <Footer />

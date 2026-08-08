@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import HubSidebar from '@/components/HubSidebar';
 
 const TOOLS = [
   { slug: 'kpi-calculator', icon: '📊', name: 'KPI Calculator' },
@@ -45,6 +46,30 @@ export default function Sidebar({
 }) {
   return (
     <aside className="sidebar">
+      {/* 👤 ABOUT WIDGET - photo + naam + social links (Blogger wala) */}
+      <div className="sidebar-widget about-widget" style={{ textAlign: 'center' }}>
+        <div className="about-avatar" style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.2rem', margin: '0 auto 12px', boxShadow: '0 4px 15px rgba(102,126,234,0.3)' }}>
+          👤
+        </div>
+        <div className="about-name" style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: 4 }}>Jatin Kumar</div>
+        <div className="about-role" style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600, marginBottom: 10 }}>Data Analyst</div>
+        <p className="about-desc" style={{ fontSize: '0.85rem', color: 'var(--text-light)', lineHeight: 1.6, marginBottom: 12 }}>
+          Passionate about Python, SQL, Power BI and turning raw data into meaningful insights.
+        </p>
+        <a className="about-portfolio-btn" href="https://jatinanalytics.co.in" target="_blank" rel="noopener" style={{ display: 'block', background: 'var(--gradient)', color: '#fff', padding: '10px', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none', marginBottom: 12 }}>
+          🚀 View Live Portfolio
+        </a>
+        <div className="social-links" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <a className="social-link social-linkedin" href="https://linkedin.com/in/jatin-kumar-5a46a720a" target="_blank" rel="noopener" style={{ background: '#0077b5', color: '#fff', padding: '8px', borderRadius: 8, textDecoration: 'none', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center' }}><i className="fab fa-linkedin" /> LinkedIn</a>
+          <a className="social-link social-github" href="https://github.com/jating1416-debug" target="_blank" rel="noopener" style={{ background: '#171515', color: '#fff', padding: '8px', borderRadius: 8, textDecoration: 'none', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center' }}><i className="fab fa-github" /> GitHub</a>
+          <a className="social-link social-kaggle" href="https://kaggle.com/jatinkhandelwal112" target="_blank" rel="noopener" style={{ background: '#20beff', color: '#fff', padding: '8px', borderRadius: 8, textDecoration: 'none', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center' }}><i className="fab fa-kaggle" /> Kaggle</a>
+          <a className="social-link social-email" href="mailto:jating1416@gmail.com" style={{ background: '#ea4335', color: '#fff', padding: '8px', borderRadius: 8, textDecoration: 'none', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center' }}><i className="fas fa-envelope" /> Email</a>
+        </div>
+      </div>
+
+      {/* ⚡ PRODUCTIVITY HUB - sidebar mein hamesha khula */}
+      <HubSidebar />
+
       {/* QUOTE OF THE DAY */}
       <QuoteOfDay />
 

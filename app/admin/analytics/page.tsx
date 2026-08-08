@@ -1,26 +1,42 @@
 import { prisma } from '@/lib/prisma';
+import StatCard from '@/components/admin/StatCard';
 
 export const dynamic = 'force-dynamic';
 
+// ADMIN ANALYTICS v2 - donut chart, top posts, category views, reading hours
 export default async function AdminAnalytics() {
   let stats: any = null;
   let dbError = false;
   try {
-    const [totalViews, totalPosts, published, drafts, topPosts, catViews] = await Promise.all([
-      prisma.article.aggregate({ _sum: { viewCount: true } }),
-      prisma.article.count(),
-      prisma.article.count({ where: { status: 'PUBLISHED' } }),
-      prisma.article.count({ where: { status: 'DRAFT' } }),
-      prisma.article.findMany({ orderBy: { viewCount: 'desc' }, take: 10, include: { category: true } }),
-      prisma.category.findMany({ include: { _count: { select: { articles: true } } } }),
-    ]);
+    const totalViews = await prisma.article.aggregate({ _sum: { viewCount: true } });
+    const totalPosts = await prisma.article.count();
+    const published = await prisma.article.count({ where: { status: 'PUBLISHED' } });
+    const drafts = await prisma.article.count({ where: { status: 'DRAFT' } });
+    const topPosts = await prisma.article.findMany({ orderBy: { viewCount: 'desc' }, take: 10, include: { category: true } });
+    const cats = await prisma.category.findMany({ include: { articles: { select: { viewCount: true, readingTime: true } } } });
+
+    // reading minutes: readingTime * views (approx)
+    let readingMinutes = 0;
+    try {
+      const allArts = await prisma.article.findMany({ select: { viewCount: true, readingTime: true } });
+      readingMinutes = allArts.reduce((s, a) => s + (a.readingTime || 3) * a.viewCount, 0);
+    } catch {}
+
     stats = {
       totalViews: totalViews._sum.viewCount || 0,
       totalPosts,
       published,
       drafts,
       topPosts,
-      catViews,
+      catViews: cats
+        .map((c: any) => ({
+          name: c.name,
+          slug: c.slug,
+          posts: c.articles.length,
+          views: c.articles.reduce((s: number, a: any) => s + a.viewCount, 0),
+        }))
+        .sort((a: any, b: any) => b.views - a.views),
+      readingHours: Math.round(readingMinutes / 60),
     };
   } catch (e) {
     dbError = true;
@@ -36,54 +52,114 @@ export default async function AdminAnalytics() {
   }
 
   const maxView = Math.max(1, ...stats.topPosts.map((p: any) => p.viewCount));
-  const maxCat = Math.max(1, ...stats.catViews.map((c: any) => c._count.articles));
+  const maxCatPosts = Math.max(1, ...stats.catViews.map((c: any) => c.posts));
+  const maxCatViews = Math.max(1, ...stats.catViews.map((c: any) => c.views));
+
+  // donut chart (CSS conic-gradient)
+  const totalForDonut = Math.max(1, stats.published + stats.drafts);
+  const pubPct = Math.round((stats.published / totalForDonut) * 100);
+  const donutStyle = {
+    background: `conic-gradient(#10b981 0% ${pubPct}%, #f59e0b ${pubPct}% 100%)`,
+  };
 
   return (
     <>
-      <h2 className="section-title">📈 Analytics (Sirf Admin Ko Dikhta Hai)</h2>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
-        {[
-          { label: 'Total Views', value: stats.totalViews.toLocaleString(), icon: '👁️' },
-          { label: 'Total Posts', value: stats.totalPosts, icon: '📄' },
-          { label: 'Published', value: stats.published, icon: '✅' },
-          { label: 'Drafts', value: stats.drafts, icon: '📝' },
-        ].map((c) => (
-          <div key={c.label} className="sidebar-widget" style={{ marginBottom: 0, padding: '16px 18px' }}>
-            <div style={{ fontSize: '1.4rem', marginBottom: 6 }}>{c.icon}</div>
-            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-dark)' }}>{c.value}</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-light)', fontWeight: 600 }}>{c.label}</div>
-          </div>
-        ))}
+      <div className="admin-page-head">
+        <div>
+          <h1>📈 Analytics</h1>
+          <p className="admin-page-sub">Sirf aapko dikhta hai — public pages pe views kabhi nahi dikhenge</p>
+        </div>
       </div>
 
-      <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 12 }}>🏆 Top 10 Articles by Views</h3>
-      <div className="sidebar-widget" style={{ padding: '14px 18px' }}>
-        {stats.topPosts.map((p: any, i: number) => (
-          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <span style={{ fontWeight: 800, width: 24, color: i < 3 ? 'var(--primary)' : 'var(--text-light)' }}>#{i + 1}</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-dark)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title.slice(0, 60)}</div>
-              <div style={{ height: 6, background: 'var(--bg)', borderRadius: 3, marginTop: 4 }}>
-                <div style={{ height: 6, width: `${(p.viewCount / maxView) * 100}%`, background: 'var(--gradient)', borderRadius: 3 }} />
+      {/* STATS */}
+      <div className="admin-stats-grid">
+        <StatCard label="Total Views" value={stats.totalViews} icon="fa-eye" grad="linear-gradient(135deg,#4f46e5,#7c3aed)" />
+        <StatCard label="Total Posts" value={stats.totalPosts} icon="fa-file-lines" grad="linear-gradient(135deg,#06b6d4,#0891b2)" />
+        <StatCard label="Published" value={stats.published} icon="fa-circle-check" grad="linear-gradient(135deg,#10b981,#059669)" />
+        <StatCard label="Drafts" value={stats.drafts} icon="fa-pen" grad="linear-gradient(135deg,#f59e0b,#d97706)" />
+        <StatCard label="Reading Hours" value={stats.readingHours} icon="fa-book-open" grad="linear-gradient(135deg,#f43f5e,#e11d48)" />
+      </div>
+
+      <div className="admin-dash-grid">
+        {/* DONUT: PUBLISHED VS DRAFT */}
+        <div className="admin-panel">
+          <div className="admin-panel-head">
+            <h2><i className="fas fa-chart-pie" /> Published vs Drafts</h2>
+          </div>
+          <div className="admin-donut-wrap">
+            <div className="admin-donut" style={donutStyle}>
+              <div className="admin-donut-hole">
+                <b>{stats.published}</b>
+                <span>published</span>
               </div>
             </div>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-dark)', whiteSpace: 'nowrap' }}>{p.viewCount}</span>
-          </div>
-        ))}
-      </div>
-
-      <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 20, }}>🗂️ Category-wise Posts</h3>
-      <div className="sidebar-widget" style={{ padding: '14px 18px' }}>
-        {stats.catViews.map((c: any) => (
-          <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, width: 140 }}>{c.name}</span>
-            <div style={{ flex: 1, height: 8, background: 'var(--bg)', borderRadius: 4 }}>
-              <div style={{ height: 8, width: `${(c._count.articles / maxCat) * 100}%`, background: 'var(--secondary)', borderRadius: 4 }} />
+            <div className="admin-donut-legend">
+              <div className="admin-legend-item">
+                <span className="admin-legend-dot" style={{ background: '#10b981' }} /> Published — {stats.published} ({pubPct}%)
+              </div>
+              <div className="admin-legend-item">
+                <span className="admin-legend-dot" style={{ background: '#f59e0b' }} /> Drafts — {stats.drafts} ({100 - pubPct}%)
+              </div>
             </div>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{c._count.articles}</span>
           </div>
-        ))}
+        </div>
+
+        {/* CATEGORY-WISE */}
+        <div className="admin-panel">
+          <div className="admin-panel-head">
+            <h2><i className="fas fa-folder-tree" /> Category-wise Posts</h2>
+          </div>
+          <div className="admin-bars">
+            {stats.catViews.map((c: any) => (
+              <div key={c.slug} className="admin-bar-row">
+                <span className="admin-bar-label">{c.name}</span>
+                <div className="admin-bar-track">
+                  <div className="admin-bar-fill violet" style={{ width: `${Math.max(4, (c.posts / maxCatPosts) * 100)}%` }} />
+                </div>
+                <span className="admin-bar-value">{c.posts}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* CATEGORY VIEWS */}
+        <div className="admin-panel">
+          <div className="admin-panel-head">
+            <h2><i className="fas fa-eye" /> Views by Category</h2>
+          </div>
+          <div className="admin-bars">
+            {stats.catViews.map((c: any) => (
+              <div key={c.slug} className="admin-bar-row">
+                <span className="admin-bar-label">{c.name}</span>
+                <div className="admin-bar-track">
+                  <div className="admin-bar-fill cyan" style={{ width: `${Math.max(4, (c.views / maxCatViews) * 100)}%` }} />
+                </div>
+                <span className="admin-bar-value">{c.views.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* TOP 10 ARTICLES */}
+        <div className="admin-panel">
+          <div className="admin-panel-head">
+            <h2><i className="fas fa-trophy" /> Top 10 Articles by Views</h2>
+          </div>
+          <div className="admin-top-list">
+            {stats.topPosts.map((p: any, i: number) => (
+              <div key={p.id} className="admin-top-row">
+                <span className={`admin-rank-medal${i < 3 ? ' top' : ''}`}>{i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}</span>
+                <div className="admin-top-info">
+                  <div className="admin-top-title">{p.title.slice(0, 60)}</div>
+                  <div className="admin-bar-track">
+                    <div className="admin-bar-fill" style={{ width: `${Math.max(4, (p.viewCount / maxView) * 100)}%` }} />
+                  </div>
+                </div>
+                <span className="admin-top-views">{p.viewCount.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </>
   );

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 type Category = { id: number; name: string; slug: string; description: string | null; icon: string | null; _count?: { articles: number } };
 
+// ADMIN CATEGORIES v2 - premium card grid (sab logic same)
 export default function AdminCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [name, setName] = useState('');
@@ -56,13 +57,21 @@ export default function AdminCategories() {
 
   return (
     <>
-      <h2 className="section-title">🗂️ Categories Management</h2>
+      <div className="admin-page-head">
+        <div>
+          <h1>🗂️ Categories <span className="admin-count-badge">{categories.length}</span></h1>
+          <p className="admin-page-sub">Add, rename ya delete — sab yahin se</p>
+        </div>
+      </div>
 
-      {msg && <p style={{ color: msg.type === 'ok' ? '#16a34a' : '#ef4444', fontSize: '0.88rem', marginBottom: 12 }}>{msg.text}</p>}
+      {msg && <p className={`admin-msg ${msg.type === 'ok' ? 'ok' : 'err'}`}>{msg.text}</p>}
 
-      <div className="sidebar-widget" style={{ marginBottom: 16 }}>
-        <div className="widget-title"><i className="fas fa-plus" /> Add New Category</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      {/* ADD CATEGORY */}
+      <div className="admin-panel">
+        <div className="admin-panel-head">
+          <h2><i className="fas fa-plus" /> Add New Category</h2>
+        </div>
+        <div className="admin-form-grid">
           <div>
             <label style={labelStyle}>Name *</label>
             <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Tableau" />
@@ -71,48 +80,58 @@ export default function AdminCategories() {
             <label style={labelStyle}>Icon (emoji)</label>
             <input style={inputStyle} value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="📊" />
           </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={labelStyle}>Description</label>
+            <input style={inputStyle} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Kis baare mein hai ye category" />
+          </div>
         </div>
-        <label style={labelStyle}>Description</label>
-        <input style={inputStyle} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Kis baare mein hai ye category" />
-        <button onClick={add} className="read-more-btn" style={{ border: 'none' }}>+ Add Category</button>
+        <button onClick={add} className="admin-cta-btn" style={{ border: 'none', cursor: 'pointer' }}>
+          <i className="fas fa-plus" /> Add Category
+        </button>
       </div>
 
-      <div className="sidebar-widget" style={{ padding: 0 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-          <thead>
-            <tr style={{ background: 'var(--bg)' }}>
-              <th style={{ padding: '10px 12px', textAlign: 'left' }}>Category</th>
-              <th style={{ padding: '10px 12px', textAlign: 'left' }}>Slug</th>
-              <th style={{ padding: '10px 12px', textAlign: 'left' }}>Posts</th>
-              <th style={{ padding: '10px 12px', textAlign: 'left' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {categories.map((c) => (
-              <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '9px 12px' }}>
-                  {editId === c.id ? (
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <input value={editName} onChange={(e) => setEditName(e.target.value)} style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg)', color: 'var(--text-dark)' }} />
-                      <button onClick={() => rename(c.id)} className="read-more-btn" style={{ border: 'none', padding: '5px 12px', fontSize: '0.75rem' }}>Save</button>
-                    </div>
-                  ) : (
-                    <b>{c.icon} {c.name}</b>
-                  )}
-                </td>
-                <td style={{ padding: '9px 12px', color: 'var(--text-light)', fontSize: '0.78rem' }}>{c.slug}</td>
-                <td style={{ padding: '9px 12px' }}>{c._count?.articles ?? 0}</td>
-                <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>
-                  <button
-                    onClick={() => { setEditId(c.id); setEditName(c.name); }}
-                    style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', marginRight: 8 }}
-                  ><i className="fas fa-edit" /> Rename</button>
-                  <button onClick={() => del(c.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><i className="fas fa-trash" /> Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* CATEGORY CARDS */}
+      <div className="admin-cat-grid">
+        {categories.map((c) => (
+          <div key={c.id} className="admin-cat-card">
+            <div className="admin-cat-icon">{c.icon || '📁'}</div>
+            <div className="admin-cat-body">
+              {editId === c.id ? (
+                <div className="admin-cat-edit">
+                  <input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') rename(c.id); }}
+                    autoFocus
+                  />
+                  <button onClick={() => rename(c.id)} className="admin-mini-btn ok"><i className="fas fa-check" /></button>
+                  <button onClick={() => setEditId(null)} className="admin-mini-btn"><i className="fas fa-xmark" /></button>
+                </div>
+              ) : (
+                <>
+                  <div className="admin-cat-name">{c.name}</div>
+                  <div className="admin-cat-slug">/{c.slug}</div>
+                </>
+              )}
+              {c.description && <div className="admin-cat-desc">{c.description.slice(0, 60)}</div>}
+            </div>
+            <div className="admin-cat-foot">
+              <span className="admin-cat-count"><i className="fas fa-file-lines" /> {c._count?.articles ?? 0} posts</span>
+              <span className="admin-cat-actions">
+                <button
+                  onClick={() => { setEditId(c.id); setEditName(c.name); }}
+                  title="Rename"
+                ><i className="fas fa-pen" /></button>
+                <button onClick={() => del(c.id)} title="Delete" className="del"><i className="fas fa-trash" /></button>
+              </span>
+            </div>
+          </div>
+        ))}
+        {categories.length === 0 && (
+          <div className="category-empty" style={{ gridColumn: '1 / -1', display: 'block' }}>
+            <p>Abhi koi category nahi — upar se pehli category add karo!</p>
+          </div>
+        )}
       </div>
     </>
   );

@@ -22,10 +22,13 @@ export default function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <div>
-          <div className="footer-brand-name">{'<DataInsights />'}</div>
+          <div className="footer-brand-name">
+            <i className="fas fa-chart-line" style={{ marginRight: 8 }} />
+            {'<DataInsights />'}
+          </div>
           <p className="footer-desc">
             Practical Data Analytics tutorials covering SQL, Python, Power BI, Excel and career
-            guidance for aspiring analysts.
+            guidance for aspiring analysts — 100% free.
           </p>
           <div className="footer-social">
             <a href="https://linkedin.com/in/jatin-kumar-5a46a720a" target="_blank" rel="noopener" title="LinkedIn"><i className="fab fa-linkedin" /></a>
@@ -69,7 +72,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="footer-bottom">
-        <span>© {new Date().getFullYear()} Data Insights by Jatin Kumar. All rights reserved.</span>
+        <span>Copyright © {new Date().getFullYear()} Data Insights by Jatin Kumar. All Rights Reserved.</span>
         <span>Built with ❤️ for Data Analysts</span>
       </div>
     </footer>

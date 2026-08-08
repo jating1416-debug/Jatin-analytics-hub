@@ -11,6 +11,7 @@ export default async function HomePage() {
   let categories: { name: string; slug: string; _count: { articles: number } }[] = [];
   let recent: any[] = [];
   let popular: any[] = [];
+  let totalPosts = 94; // fallback
   let dbError = false;
 
   try {
@@ -19,6 +20,10 @@ export default async function HomePage() {
       include: { _count: { select: { articles: true } } },
     });
   } catch (e) { console.error('categories error:', e); dbError = true; }
+
+  try {
+    totalPosts = await prisma.article.count({ where: { status: 'PUBLISHED' } });
+  } catch (e) { console.error('count error:', e); }
 
   try {
     recent = await prisma.article.findMany({
@@ -37,10 +42,19 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero />
+      <Hero
+        stats={{
+          posts: totalPosts,
+          tools: 12,
+          topics: categories.length || 7,
+        }}
+      />
       <div className="layout-wrapper">
         <main className="posts-section">
-          <h2 className="section-title">📝 Latest Articles</h2>
+          <h2 className="section-title">
+            <span className="section-chip"><i className="fas fa-newspaper" /></span>
+            Latest Articles
+          </h2>
           {/* SMOOTH - client-side filter + pagination (bina reload) */}
           <PostList />
         </main>

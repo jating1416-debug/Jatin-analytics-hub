@@ -2,10 +2,29 @@ import Link from 'next/link';
 import type { ArticleWithCategory } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 
+const CAT_ICONS: Record<string, string> = {
+  sql: '🗄️',
+  mysql: '🗄️',
+  python: '🐍',
+  'power-bi': '📈',
+  excel: '📗',
+  career: '💼',
+  'interview-questions': '🎯',
+  'case-study': '📁',
+  uncategorized: '📝',
+};
+const CAT_ICON = (slug: string | null | undefined) => CAT_ICONS[slug || ''] || '📝';
+
 export default function ArticleCard({ article }: { article: ArticleWithCategory }) {
   const catSlug = article.category?.slug || 'uncategorized';
   return (
     <div className="post-card" data-label={catSlug}>
+      {/* PREMIUM THUMB STRIP - gradient + category icon */}
+      <Link href={`/${catSlug}/${article.slug}`} className="post-thumb-strip" aria-label={article.title}>
+        <span className="post-category-badge">{article.category?.name || 'Article'}</span>
+        <span className="post-thumb-icon">{CAT_ICON(article.category?.slug)}</span>
+        <span className="thumb-arrow"><i className="fas fa-arrow-right" /></span>
+      </Link>
       <div className="post-body">
         <div className="post-meta">
           <span>

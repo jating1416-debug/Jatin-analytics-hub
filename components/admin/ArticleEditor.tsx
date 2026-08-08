@@ -171,22 +171,36 @@ export default function ArticleEditor({
     }
   };
 
+  // ---------- LIVE STATS (word count / reading time) ----------
+  const plainText = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const wordCount = plainText ? plainText.split(' ').length : 0;
+  const readMins = Math.max(1, Math.round(wordCount / 200));
+  const catSlug = categories.find((c) => c.id === categoryId)?.slug;
+
   return (
     <div>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-        <button className="read-more-btn" onClick={() => save('PUBLISHED')} disabled={saving} style={{ opacity: saving ? 0.6 : 1, border: 'none' }}>
+      {/* SAVE ACTION BAR */}
+      <div className="admin-editor-actions">
+        <button className="admin-cta-btn" onClick={() => save('PUBLISHED')} disabled={saving} style={{ opacity: saving ? 0.6 : 1, border: 'none', cursor: 'pointer' }}>
           <i className="fas fa-globe" /> {articleId ? 'Update & Publish' : 'Publish'}
         </button>
         <button
           onClick={() => save('DRAFT')} disabled={saving}
-          style={{
-            background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-dark)',
-            padding: '11px 22px', borderRadius: 24, fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer',
-          }}
+          className="admin-save-draft"
         >
           <i className="fas fa-save" /> Save Draft
         </button>
+        {articleId && slug && (
+          <a className="admin-view-live" href={`/${catSlug || 'post'}/${slug}`} target="_blank" rel="noopener">
+            <i className="fas fa-external-link" /> View Post
+          </a>
+        )}
         {uploading && <span style={{ alignSelf: 'center', fontSize: '0.8rem', color: 'var(--text-light)' }}>⏳ Uploading...</span>}
+        <span className="admin-editor-stats">
+          <span><i className="fas fa-file-word" /> {wordCount.toLocaleString()} words</span>
+          <span><i className="fas fa-clock" /> {readMins} min read</span>
+          <span><i className="fas fa-text-height" /> {content.length.toLocaleString()} chars</span>
+        </span>
       </div>
 
       {msg && (

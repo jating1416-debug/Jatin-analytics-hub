@@ -13,6 +13,7 @@ type Article = {
   category: { name: string; slug: string } | null;
 };
 
+// ADMIN ARTICLES v2 - premium table (sab logic same, naya design)
 export default function AdminArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [q, setQ] = useState('');
@@ -66,90 +67,114 @@ export default function AdminArticlesPage() {
     load();
   };
 
-  const statusBadge = (s: string) => ({
-    fontSize: '0.68rem', fontWeight: 700, padding: '3px 9px', borderRadius: 12,
-    background: s === 'PUBLISHED' ? 'rgba(22,163,74,0.14)' : s === 'DRAFT' ? 'rgba(245,158,11,0.14)' : 'rgba(100,116,139,0.15)',
-    color: s === 'PUBLISHED' ? '#16a34a' : s === 'DRAFT' ? '#f59e0b' : '#64748b',
-  });
+  const STATUS_TABS = [
+    { key: 'ALL', label: 'All' },
+    { key: 'PUBLISHED', label: 'Published' },
+    { key: 'DRAFT', label: 'Draft' },
+    { key: 'ARCHIVED', label: 'Archived' },
+  ];
 
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
-        <h2 className="section-title" style={{ marginBottom: 0 }}>📄 All Articles ({articles.length})</h2>
-        <Link className="read-more-btn" href="/admin/articles/new"><i className="fas fa-plus" /> New Article</Link>
+      <div className="admin-page-head">
+        <div>
+          <h1>📄 All Articles <span className="admin-count-badge">{articles.length}</span></h1>
+          <p className="admin-page-sub">Search, filter, bulk publish/draft — sab yahin se</p>
+        </div>
+        <Link className="admin-cta-btn" href="/admin/articles/new"><i className="fas fa-plus" /> New Article</Link>
       </div>
 
-      {msg && <p style={{ color: msg.type === 'ok' ? '#16a34a' : '#ef4444', fontSize: '0.88rem', marginBottom: 10 }}>{msg.text}</p>}
+      {msg && <p className={`admin-msg ${msg.type === 'ok' ? 'ok' : 'err'}`}>{msg.text}</p>}
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-        <input
-          value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title..."
-          style={{ flex: 1, minWidth: 180, padding: '9px 14px', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--bg)', color: 'var(--text-dark)', outline: 'none', fontSize: '0.85rem' }}
-        />
-        <select value={status} onChange={(e) => setStatus(e.target.value)}
-          style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--bg)', color: 'var(--text-dark)' }}>
-          <option value="ALL">All</option>
-          <option value="PUBLISHED">Published</option>
-          <option value="DRAFT">Draft</option>
-          <option value="ARCHIVED">Archived</option>
-        </select>
+      {/* TOOLBAR: search + status tabs */}
+      <div className="admin-toolbar">
+        <div className="admin-search">
+          <i className="fas fa-search" />
+          <input
+            value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title..."
+          />
+        </div>
+        <div className="admin-status-tabs">
+          {STATUS_TABS.map((t) => (
+            <button
+              key={t.key}
+              className={`admin-status-tab${status === t.key ? ' active' : ''}`}
+              onClick={() => setStatus(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* BULK BAR */}
       {selected.size > 0 && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12, padding: 10, background: 'var(--bg)', borderRadius: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>{selected.size} selected:</span>
-          <button onClick={() => bulk('PUBLISHED')} className="read-more-btn" style={{ border: 'none', padding: '6px 14px', fontSize: '0.75rem' }}>✅ Publish</button>
-          <button onClick={() => bulk('DRAFT')} className="read-more-btn" style={{ border: 'none', padding: '6px 14px', fontSize: '0.75rem', background: 'var(--secondary)' }}>📝 Draft</button>
-          <button onClick={() => bulk('DELETE')} style={{ background: 'none', border: '1px solid #ef4444', color: '#ef4444', padding: '6px 14px', borderRadius: 16, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>🗑️ Delete</button>
+        <div className="admin-bulk-bar">
+          <span className="admin-bulk-count">{selected.size} selected</span>
+          <button onClick={() => bulk('PUBLISHED')} className="admin-bulk-btn pub"><i className="fas fa-circle-check" /> Publish</button>
+          <button onClick={() => bulk('DRAFT')} className="admin-bulk-btn draft"><i className="fas fa-pen" /> Draft</button>
+          <button onClick={() => bulk('DELETE')} className="admin-bulk-btn del"><i className="fas fa-trash" /> Delete</button>
         </div>
       )}
 
       {loading && (
-        <div className="sidebar-widget" style={{ padding: 20, textAlign: 'center', color: 'var(--text-light)' }}>
+        <div className="admin-panel" style={{ padding: 24, textAlign: 'center', color: 'var(--text-light)' }}>
           <i className="fas fa-spinner fa-spin" style={{ marginRight: 8 }} /> Loading articles...
         </div>
       )}
 
       {!loading && (
-      <div className="sidebar-widget" style={{ padding: 0, overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-          <thead>
-            <tr style={{ background: 'var(--bg)' }}>
-              <th style={{ padding: '10px 12px', textAlign: 'left', width: 34 }}><input type="checkbox" onChange={(e) => {
-                if (e.target.checked) setSelected(new Set(articles.map((a) => a.id)));
-                else setSelected(new Set());
-              }} /></th>
-              <th style={{ padding: '10px 12px', textAlign: 'left' }}>Title</th>
-              <th style={{ padding: '10px 12px', textAlign: 'left' }}>Category</th>
-              <th style={{ padding: '10px 12px', textAlign: 'left' }}>Status</th>
-              <th style={{ padding: '10px 12px', textAlign: 'left' }}>Views</th>
-              <th style={{ padding: '10px 12px', textAlign: 'left' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {articles.map((a) => (
-              <tr key={a.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '9px 12px' }}><input type="checkbox" checked={selected.has(a.id)} onChange={() => toggle(a.id)} /></td>
-                <td style={{ padding: '9px 12px', maxWidth: 260 }}>
-                  <Link href={`/admin/articles/${a.id}/edit`} style={{ fontWeight: 600 }}>{a.title.slice(0, 55)}</Link>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-light)' }}>/{a.category?.slug || 'post'}/{a.slug}</div>
-                </td>
-                <td style={{ padding: '9px 12px' }}>{a.category?.name || '-'}</td>
-                <td style={{ padding: '9px 12px' }}><span style={statusBadge(a.status)}>{a.status}</span></td>
-                <td style={{ padding: '9px 12px' }}>{a.viewCount}</td>
-                <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>
-                  <Link href={`/admin/articles/${a.id}/edit`} style={{ color: 'var(--primary)', marginRight: 8 }}><i className="fas fa-edit" /> Edit</Link>
-                  <a href={`/${a.category?.slug || 'post'}/${a.slug}`} target="_blank" rel="noopener" style={{ color: 'var(--text-light)', marginRight: 8 }}><i className="fas fa-eye" /> View</a>
-                  <button onClick={() => del(a.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><i className="fas fa-trash" /></button>
-                </td>
+        <div className="admin-panel" style={{ padding: 0, overflowX: 'auto' }}>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th style={{ width: 40 }}>
+                  <input
+                    type="checkbox"
+                    className="admin-check"
+                    onChange={(e) => {
+                      if (e.target.checked) setSelected(new Set(articles.map((a) => a.id)));
+                      else setSelected(new Set());
+                    }}
+                  />
+                </th>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Views</th>
+                <th>Actions</th>
               </tr>
-            ))}
-            {articles.length === 0 && (
-              <tr><td colSpan={6} style={{ padding: 20, textAlign: 'center', color: 'var(--text-light)' }}>Koi article nahi mila.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {articles.map((a) => (
+                <tr key={a.id} className={selected.has(a.id) ? 'selected' : ''}>
+                  <td><input type="checkbox" className="admin-check" checked={selected.has(a.id)} onChange={() => toggle(a.id)} /></td>
+                  <td className="admin-title-cell">
+                    <Link href={`/admin/articles/${a.id}/edit`}>{a.title.slice(0, 55)}</Link>
+                    <div className="admin-slug">/{a.category?.slug || 'post'}/{a.slug}</div>
+                  </td>
+                  <td>{a.category ? <span className="admin-chip">{a.category.name}</span> : <span className="admin-chip muted">—</span>}</td>
+                  <td>
+                    <span className={`admin-status-pill ${a.status === 'PUBLISHED' ? 'pub' : a.status === 'DRAFT' ? 'draft' : 'arch'}`}>
+                      {a.status}
+                    </span>
+                  </td>
+                  <td><span className="admin-views-badge"><i className="fas fa-eye" /> {a.viewCount.toLocaleString()}</span></td>
+                  <td className="admin-row-actions">
+                    <Link href={`/admin/articles/${a.id}/edit`} title="Edit"><i className="fas fa-pen" /></Link>
+                    <a href={`/${a.category?.slug || 'post'}/${a.slug}`} target="_blank" rel="noopener" title="View live"><i className="fas fa-external-link" /></a>
+                    <button onClick={() => del(a.id)} title="Delete"><i className="fas fa-trash" /></button>
+                  </td>
+                </tr>
+              ))}
+              {articles.length === 0 && (
+                <tr><td colSpan={6} style={{ padding: 28, textAlign: 'center', color: 'var(--text-light)' }}>
+                  😕 Koi article nahi mila — filter/search change karke dekho.
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   );

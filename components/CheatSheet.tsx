@@ -38,6 +38,13 @@ const CHEAT_SHEETS: Record<string, { title: string; blocks: { heading: string; c
       { heading: 'FILTER + ALL', code: `Total All = CALCULATE(SUM(Sales[Amount]), ALL(Region))\n% of Total = DIVIDE(SUM(Sales[Amount]), [Total All])` },
       { heading: 'RANKX', code: `Product Rank = RANKX(\n    ALL(Product[Name]),\n    [Total Sales],\n    , DESC, Dense\n)` },
       { heading: 'IF / SWITCH', code: `Band = SWITCH(TRUE(),\n  [Sales] > 100000, "High",\n  [Sales] > 50000, "Mid",\n  "Low"\n)` },
+      { heading: 'CALENDAR & Date Table', code: `Calendar =
+CALENDAR(DATE(2020,1,1), DATE(2030,12,31))` },
+      { heading: 'DISTINCTCOUNT / VALUES', code: `Unique Customers = DISTINCTCOUNT(Sales[CustomerID])
+Active Products = COUNTROWS(VALUES(Product[Name]))` },
+      { heading: 'RELATED / LOOKUP', code: `Category = RELATED(Product[Category])
+Region = LOOKUPVALUE(Region[Name], Region[ID], Sales[RegionID])` },
+
     ],
   },
   excel: {
@@ -49,6 +56,29 @@ const CHEAT_SHEETS: Record<string, { title: string; blocks: { heading: string; c
       { heading: 'IF / IFS', code: `=IF(A1>90, "A", IF(A1>75, "B", "C"))\n\n=IFS(A1>90,"A", A1>75,"B", TRUE,"C")` },
       { heading: 'TEXT Functions', code: `=TEXT(A1, "DD-MMM-YYYY")\n=TRIM(A1)\n=UPPER(A1), =LOWER(A1)\n=LEFT(A1,5), =RIGHT(A1,5), =MID(A1,2,3)` },
       { heading: 'Pivot Table Tips', code: `Pivot table:\n- Rows: Category\n- Values: Sum of Amount\n- Filter: Year\n\nQuick: Alt+N+V (Insert PivotTable)` },
+      { heading: 'DATE Functions', code: `=TODAY() / =NOW()
+=DATE(2025, 12, 31)
+=DATEDIF(A1, B1, "d")   -- days
+=DATEDIF(A1, B1, "m")   -- months
+=EOMONTH(A1, 0)         -- month end
+=WEEKDAY(A1)` },
+      { heading: 'CONDITIONAL FORMAT', code: `Select range → Home → Conditional Formatting:
+- Highlight Cells Rules
+- Top/Bottom Rules
+- Data Bars
+- Color Scales
+- Icon Sets
+
+Custom formula: =$A1>100` },
+      { heading: 'DATA TOOLS', code: `Data → Remove Duplicates (dedup)
+
+Data → Data Validation:
+- List se dropdown
+- Number range
+- Custom formula
+
+Data → Text to Columns (split)` },
+
     ],
   },
 };

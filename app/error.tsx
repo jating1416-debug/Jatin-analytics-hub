@@ -11,14 +11,11 @@ export default function ErrorBoundary({
   reset: () => void;
 }) {
   return (
-    <div style={{ maxWidth: 640, margin: '80px auto', padding: '0 20px', textAlign: 'center' }}>
-      <div style={{ fontSize: '3rem', fontWeight: 800, background: 'var(--gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-        Oops!
-      </div>
-      <h1 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '10px 0 12px', color: 'var(--text-dark)' }}>
-        Kuch galat ho gaya 😕
-      </h1>
-      <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginBottom: 16, lineHeight: 1.7 }}>
+    <div className="fancy-page">
+      <span className="fancy-page-icon">⚠️</span>
+      <div className="fancy-page-big">Oops!</div>
+      <h1>Kuch galat ho gaya 😕</h1>
+      <p>
         Ye aam taur pe database connection ki wajah se hota hai. Thodi der baad try karo.
       </p>
       {error?.digest && (
@@ -26,7 +23,7 @@ export default function ErrorBoundary({
           Error code: {error.digest}
         </p>
       )}
-      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+      <div className="fancy-actions">
         <button onClick={reset} className="read-more-btn" style={{ border: 'none', cursor: 'pointer' }}>
           🔄 Try Again
         </button>

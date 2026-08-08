@@ -147,18 +147,18 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
         <TableOfContents html={post.content} />
         <main className="posts-section">
           <div className="post-content-wrapper">
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-light)', marginBottom: 12 }}>
-              <a href="/" style={{ color: 'var(--primary)' }}>Home</a>
-              <span style={{ margin: '0 8px' }}>/</span>
+            <div className="breadcrumb">
+              <a href="/" style={{ color: 'var(--primary)' }}><i className="fas fa-home" style={{ marginRight: 5 }} />Home</a>
+              <span className="breadcrumb-sep">/</span>
               {post.category && (
                 <>
                   <a href={`/category/${catSlug}`} style={{ color: 'var(--primary)' }}>{post.category.name}</a>
-                  <span style={{ margin: '0 8px' }}>/</span>
+                  <span className="breadcrumb-sep">/</span>
                 </>
               )}
-              <span>{post.title.slice(0, 50)}...</span>
+              <span className="breadcrumb-current">{post.title.slice(0, 50)}...</span>
             </div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-dark)', lineHeight: 1.3, marginBottom: 20 }}>
+            <h1 className="article-title" style={{ fontSize: 'clamp(1.6rem, 3.5vw, 2.4rem)', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1.28, marginBottom: 20, letterSpacing: '-0.02em' }}>
               {post.title}
             </h1>
 
