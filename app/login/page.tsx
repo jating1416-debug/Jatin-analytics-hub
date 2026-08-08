@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function AdminLogin() {
+export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,7 +58,7 @@ export default function AdminLogin() {
               type="submit"
               disabled={loading}
               className="read-more-btn"
-              style={{ width: '100%', justifyContent: 'center' }}
+              style={{ width: '100%', justifyContent: 'center', border: 'none' }}
             >
               {loading ? 'Logging in...' : 'Login'}
             </button>

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await isAdmin();
-  if (!admin) redirect('/admin/login');
+  if (!admin) redirect('/login'); // login page ab /admin ke BAHAR hai (loop fix)
 
   return (
     <div className="layout-wrapper">
@@ -23,7 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.88rem', padding: '9px 0', fontFamily: 'inherit' }}
                 onClick={async () => {
                   await fetch('/api/auth/logout', { method: 'POST' });
-                  window.location.href = '/admin/login';
+                  window.location.href = '/login';
                 }}
               >
                 <i className="fas fa-sign-out-alt" /> Logout
