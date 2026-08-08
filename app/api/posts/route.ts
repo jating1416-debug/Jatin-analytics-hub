@@ -5,6 +5,9 @@ import { prisma } from '@/lib/prisma';
 // ?all=1 -> saari published posts ki summaries (content ke bina)
 export const dynamic = 'force-dynamic';
 
+// CDN cache 60s -> PostList repeat visits pe INSTANT
+const CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' };
+
 export async function GET(req: NextRequest) {
   const all = req.nextUrl.searchParams.get('all') === '1';
   try {
@@ -20,7 +23,7 @@ export async function GET(req: NextRequest) {
         orderBy: { publishedAt: 'desc' },
         take: 500,
       });
-      return NextResponse.json({ posts });
+      return NextResponse.json({ posts }, { headers: CACHE_HEADERS });
     }
 
     const sp = req.nextUrl.searchParams;
@@ -50,7 +53,7 @@ export async function GET(req: NextRequest) {
       skip: (page - 1) * 10,
       take: 10,
     });
-    return NextResponse.json({ posts, total, totalPages: Math.max(1, Math.ceil(total / 10)), page });
+    return NextResponse.json({ posts, total, totalPages: Math.max(1, Math.ceil(total / 10)), page }, { headers: CACHE_HEADERS });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'DB error', posts: [] }, { status: 200 });
   }

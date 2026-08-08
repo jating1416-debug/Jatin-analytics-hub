@@ -78,7 +78,7 @@ export default function Hero({
       <div className="hero-grid-overlay" />
 
       <div className="featured-banner-inner">
-        <span className="featured-tag">
+        <span className="featured-tag" data-i18n="hero.tag">
           <i className="fas fa-chart-line" style={{ marginRight: 6 }} />
           DATA ANALYTICS BLOG
         </span>
@@ -100,7 +100,7 @@ export default function Hero({
             className="featured-btn outline"
             style={{ border: '1.5px solid rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.08)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(10px)' }}
           >
-            📚 Start Learning <i className="fas fa-chevron-down" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', marginLeft: 4 }} />
+            <span data-i18n="hero.start">📚 Start Learning</span> <i className="fas fa-chevron-down" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', marginLeft: 4 }} />
           </button>
           {open && (
             <div
@@ -146,7 +146,7 @@ export default function Hero({
         </div>
 
         <Link className="featured-btn" href="/tools" style={{ textDecoration: 'none' }}>
-          🛠️ Free Tools <i className="fas fa-arrow-right" style={{ marginLeft: 2 }} />
+          <span data-i18n="hero.tools">🛠️ Free Tools</span> <i className="fas fa-arrow-right" style={{ marginLeft: 2 }} />
         </Link>
 
         {/* LIVE STATS */}
@@ -166,7 +166,7 @@ export default function Hero({
         </div>
 
         <div className="hero-scroll-hint">
-          Scroll to explore <i className="fas fa-chevron-down" />
+          <span data-i18n="hero.scroll">Scroll to explore</span> <i className="fas fa-chevron-down" />
         </div>
       </div>
     </div>

@@ -40,7 +40,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-col">
-          <h4>Topics</h4>
+          <h4 data-i18n="footer.topics">Topics</h4>
           <ul className="footer-links">
             {TOPICS.map((t) => (
               <li key={t.href}><Link href={t.href}>{t.label}</Link></li>
@@ -49,7 +49,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-col">
-          <h4>Quick Links</h4>
+          <h4 data-i18n="footer.quick">Quick Links</h4>
           <ul className="footer-links">
             <li><Link href="/tools">🛠️ All Tools</Link></li>
             <li><Link href="/archive">🗓️ Archive</Link></li>
@@ -62,7 +62,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-col">
-          <h4>Legal &amp; Info</h4>
+          <h4 data-i18n="footer.legal">Legal &amp; Info</h4>
           <ul className="footer-links">
             {LEGAL.map((l) => (
               <li key={l.href}><Link href={l.href}>{l.label}</Link></li>
@@ -72,7 +72,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="footer-bottom">
-        <span>Copyright © {new Date().getFullYear()} Data Insights by Jatin Kumar. All Rights Reserved.</span>
+        <span>Copyright © {new Date().getFullYear()} Data Insights by Jatin Kumar. <span data-i18n="footer.rights">All Rights Reserved.</span></span>
         <span>Built with ❤️ for Data Analysts</span>
       </div>
     </footer>

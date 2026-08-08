@@ -41,8 +41,8 @@ export default function HotPicksCarousel() {
     <div className="hot-picks">
       <div className="hot-picks-head">
         <span className="section-chip"><i className="fas fa-fire" /></span>
-        <span className="hot-picks-title">Hot Picks</span>
-        <span className="hot-picks-sub">Sabse zabardast articles</span>
+        <span className="hot-picks-title" data-i18n="sec.hotpicks">Hot Picks</span>
+        <span className="hot-picks-sub" data-i18n="sec.hotpicks-sub">Sabse zabardast articles</span>
         <div className="hot-picks-arrows">
           <button onClick={() => scrollBy(-1)} aria-label="Previous"><i className="fas fa-arrow-left" /></button>
           <button onClick={() => scrollBy(1)} aria-label="Next"><i className="fas fa-arrow-right" /></button>

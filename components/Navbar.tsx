@@ -4,13 +4,18 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import LanguageToggle from '@/components/LanguageToggle';
 
+// NAVBAR v3 - REAL category pages pe links (reliable - koi JS depend nahi)
+// + compact layout (portfolio kabhi cut nahi hoga) + i18n labels
+
 const NAV_ITEMS = [
-  { href: '/?cat=sql', label: '📊 SQL' },
-  { href: '/?cat=python', label: '🐍 Python' },
-  { href: '/?cat=power-bi', label: '📈 Power BI' },
-  { href: '/?cat=career', label: '💼 Career' },
-  { href: '/?cat=interview-questions', label: '🎯 Interview Q&A' },
-  { href: '/?cat=case-study', label: '📁 Case Study' },
+  { href: '/category/sql', label: '📊 SQL' },
+  { href: '/category/python', label: '🐍 Python' },
+  { href: '/category/power-bi', label: '📈 Power BI' },
+  { href: '/category/excel', label: '📗 Excel' },
+  { href: '/category/misc', label: '📚 Data Analytics' },
+  { href: '/category/career', label: '💼 Career' },
+  { href: '/category/interview-questions', label: '🎯 Interview Q&A' },
+  { href: '/category/case-study', label: '📁 Case Study' },
 ];
 
 export default function Navbar() {
@@ -74,6 +79,7 @@ export default function Navbar() {
               placeholder="Search posts..."
               type="text"
               autoComplete="off"
+              data-i18n="nav.search"
             />
             <i className="fas fa-search" />
           </form>
@@ -102,15 +108,19 @@ export default function Navbar() {
         </div>
 
         <ul className={`nav-links${menuOpen ? ' open' : ''}`}>
-          <li><Link href="/" onClick={() => setMenuOpen(false)}>🏠 Home</Link></li>
+          <li>
+            <Link href="/" onClick={() => setMenuOpen(false)} data-i18n="nav.home">🏠 Home</Link>
+          </li>
           {NAV_ITEMS.map((item) => (
             <li key={item.href}>
               <Link href={item.href} onClick={() => setMenuOpen(false)}>{item.label}</Link>
             </li>
           ))}
-          <li><Link href="/downloads" onClick={() => setMenuOpen(false)}>📥 Downloads</Link></li>
           <li>
-            <a className="nav-portfolio-btn" href="https://jatinanalytics.co.in" target="_blank" rel="noopener">
+            <Link href="/downloads" onClick={() => setMenuOpen(false)} data-i18n="nav.downloads">📥 Downloads</Link>
+          </li>
+          <li>
+            <a className="nav-portfolio-btn" href="https://jatinanalytics.co.in" target="_blank" rel="noopener" data-i18n="nav.portfolio">
               🚀 My Portfolio
             </a>
           </li>
@@ -120,6 +130,7 @@ export default function Navbar() {
           className="cs-navbar-btn"
           onClick={() => window.dispatchEvent(new CustomEvent('open-cheatsheet'))}
           title="Cheat Sheet (Ctrl+Shift+C)"
+          data-i18n="nav.cheatsheet"
         >
           <i className="fas fa-code" /> <span>Cheat Sheet</span>
         </button>
@@ -129,6 +140,7 @@ export default function Navbar() {
           onClick={() => window.dispatchEvent(new CustomEvent('open-productivity-hub'))}
           style={{ background: 'var(--bg)', color: 'var(--text-dark)', border: '1px solid var(--border)' }}
           title="Productivity Hub"
+          data-i18n="nav.hub"
         >
           <i className="fas fa-bolt" /> <span>Hub</span>
         </button>

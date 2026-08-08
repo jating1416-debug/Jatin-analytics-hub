@@ -1,5 +1,6 @@
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import type { Metadata } from 'next';
+import { cache } from 'react';
 import { prisma } from '@/lib/prisma';
 import TableOfContents from '@/components/TableOfContents';
 import SidebarClient from '@/components/SidebarClient';
@@ -10,19 +11,31 @@ import FeedbackWidget from '@/components/FeedbackWidget';
 import FontSizeAdjuster from '@/components/FontSizeAdjuster';
 import CommentsSection from '@/components/CommentsSection';
 import TryInPlayground from '@/components/TryInPlayground';
-import { addToHistory } from '@/components/ReadingHistory';
+import FocusModeButton from '@/components/FocusModeButton';
+import TldrBox from '@/components/TldrBox';
+import HeadingLinks from '@/components/HeadingLinks';
 import { SITE_URL, formatDate, excerptFrom } from '@/lib/utils';
 
-export const dynamic = 'force-dynamic';
+// ARTICLE PAGE v2 - FAST (ISR 60s):
+// - metadata + page EK hi DB query (React cache)
+// - related/prev/next = sirf 2 queries (pehle 4-5 thi)
+// - Views SIRF client (ViewCounter) se count hote hain - server pe double count nahi
+// - 60 sec CDN cache -> repeat visits INSTANT
+
+export const revalidate = 60;
+
+const getPost = cache(async (slug: string) => {
+  return prisma.article.findUnique({
+    where: { slug },
+    include: { category: true, author: { select: { name: true } } },
+  });
+});
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string; slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  let post: Awaited<ReturnType<typeof prisma.article.findUnique>> = null;
+  let post: Awaited<ReturnType<typeof getPost>> = null;
   try {
-    post = await prisma.article.findUnique({
-      where: { slug },
-      include: { category: true },
-    });
+    post = await getPost(slug);
   } catch (e) {
     console.error('article metadata error:', e);
   }
@@ -42,82 +55,82 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
   };
 }
 
-export default async function ArticlePage({ params }: { params: Promise<{ category: string; slug: string }> }) {
-  const { slug } = await params;
+// Reserved top-level segments - inhe kabhi article route pe match nahi hona chahiye
+const RESERVED_SEGMENTS = new Set(['category', 'tag', 'tools', 'admin', 'login', 'search', 'saved', 'contact', 'archive', 'author', 'downloads', 'p', 'api', 'feed.xml', 'sitemap.xml', 'robots.txt']);
 
-  let post: Awaited<ReturnType<typeof prisma.article.findUnique>> = null;
+export default async function ArticlePage({ params }: { params: Promise<{ category: string; slug: string }> }) {
+  const { category, slug } = await params;
+
+  // Static route missing hone pe bhi galat page render nahi hoga
+  if (RESERVED_SEGMENTS.has(category)) notFound();
+
+  let post: Awaited<ReturnType<typeof getPost>> = null;
   let dbError = false;
   try {
-    post = await prisma.article.findUnique({
-      where: { slug },
-      include: { category: true, author: { select: { name: true } }, tags: { include: { tag: true } } },
-    });
+    post = await getPost(slug);
   } catch (e) {
     dbError = true;
     console.error('DB error article page:', e);
   }
-  if (dbError) {
+
+  // DB fail hone pe friendly message (bina crash)
+  if (dbError || !post || post.status !== 'PUBLISHED') {
+    if (!dbError) notFound();
     return (
       <div className="layout-wrapper">
         <main className="posts-section">
           <div className="category-empty" style={{ display: 'block' }}>
             <p>⚠️ Database se connect nahi ho paya — thodi der baad refresh karo.</p>
           </div>
-          <ViewCounter articleId={post.id} />
-          <PostProcessor html={post.content} />
-          <TryInPlayground />
-          <script dangerouslySetInnerHTML={{ __html: `try { localStorage.setItem('di_current_post', JSON.stringify({ title: ${JSON.stringify(post.title)}, url: ${JSON.stringify('/' + catSlug + '/' + post.slug)} })); } catch(e){}` }} />
-          <FeedbackWidget />
         </main>
       </div>
     );
   }
-  if (!post || post.status !== 'PUBLISHED') notFound();
 
-  // increment view count (fire and forget)
-  prisma.article.update({ where: { id: post.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+  // Galat category URL (e.g. /sql/python-post) -> sahi URL pe 301
+  if (post.category?.slug && post.category.slug !== category) {
+    permanentRedirect(`/${post.category.slug}/${post.slug}`);
+  }
 
-  // tags for related-by-tag
-  const postTagIds = post.tags?.map((t) => t.tagId) || [];
+  // FAQ items extract karo (SEO: FAQPage schema ke liye)
+  const faqItems: { q: string; a: string }[] = [];
+  try {
+    const faqBlocks = post.content.match(/<div class="faq-block">([\s\S]*?)<\/div>/g) || [];
+    faqBlocks.forEach((block) => {
+      const q = block.match(/<h4[^>]*>([\s\S]*?)<\/h4>/);
+      const a = block.match(/<p[^>]*>([\s\S]*?)<\/p>/);
+      if (q && a) {
+        const clean = (s: string) => s.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+        faqItems.push({ q: clean(q[1]).slice(0, 200), a: clean(a[1]).slice(0, 500) });
+      }
+    });
+  } catch (e) { console.error('faq extract error:', e); }
 
   const catSlug = post.category?.slug || 'post';
   const url = `${SITE_URL}/${catSlug}/${post.slug}`;
 
-  // related: pehle same-tag posts, warna same category
+  // RELATED + PREV/NEXT - SIRF 2 QUERIES (fast!)
   let related: any[] = [];
+  let prevPost: any = null;
+  let nextPost: any = null;
   try {
-    if (postTagIds.length > 0) {
-      related = await prisma.article.findMany({
-        where: { status: 'PUBLISHED', id: { not: post.id }, tags: { some: { tagId: { in: postTagIds } } } },
-        include: { category: true },
-        orderBy: { publishedAt: 'desc' },
-        take: 3,
-      });
-    }
-    if (related.length < 3) {
-      const catRelated = await prisma.article.findMany({
-        where: { status: 'PUBLISHED', categoryId: post.categoryId, id: { not: post.id } },
-        include: { category: true },
-        orderBy: { publishedAt: 'desc' },
-        take: 3,
-      });
-      // fill remaining
-      const have = new Set(related.map((r: any) => r.id));
-      catRelated.forEach((r: any) => { if (!have.has(r.id) && related.length < 3) { related.push(r); have.add(r.id); } });
-    }
-  } catch (e) { console.error('related error:', e); }
+    // prev + related: same category, purani posts (4 sabse paas wali)
+    const older = await prisma.article.findMany({
+      where: { status: 'PUBLISHED', categoryId: post.categoryId, publishedAt: { lt: post.publishedAt || new Date() } },
+      include: { category: true },
+      orderBy: { publishedAt: 'desc' },
+      take: 4,
+    });
+    prevPost = older[0] || null;
+    related = older.slice(1, 4);
 
-  // prev/next in same category (SEQUENTIAL - pooler connection_limit=1 ke saath safe)
-  const prevPost = await prisma.article.findFirst({
-    where: { status: 'PUBLISHED', categoryId: post.categoryId, publishedAt: { lt: post.publishedAt || new Date() } },
-    orderBy: { publishedAt: 'desc' },
-    select: { title: true, slug: true, category: { select: { slug: true } } },
-  });
-  const nextPost = await prisma.article.findFirst({
-    where: { status: 'PUBLISHED', categoryId: post.categoryId, publishedAt: { gt: post.publishedAt || new Date() } },
-    orderBy: { publishedAt: 'asc' },
-    select: { title: true, slug: true, category: { select: { slug: true } } },
-  });
+    // next: same category, nayi post (sirf 1)
+    nextPost = await prisma.article.findFirst({
+      where: { status: 'PUBLISHED', categoryId: post.categoryId, publishedAt: { gt: post.publishedAt || new Date() } },
+      include: { category: true },
+      orderBy: { publishedAt: 'asc' },
+    });
+  } catch (e) { console.error('related error:', e); }
 
   return (
     <>
@@ -131,6 +144,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
         categoryName={post.category?.name}
         categoryUrl={post.category ? `${SITE_URL}/category/${post.category.slug}` : undefined}
         authorName={post.author?.name || 'Jatin Kumar'}
+        faq={faqItems.length > 0 ? faqItems : undefined}
       />
       <div className="layout-wrapper toc-3col">
         <TableOfContents html={post.content} />
@@ -151,9 +165,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
               {post.title}
             </h1>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
               <FontSizeAdjuster />
+              <FocusModeButton />
             </div>
+            <TldrBox />
             <div className="post-meta" style={{ marginBottom: 25, paddingBottom: 20, borderBottom: '2px solid var(--border)', flexWrap: 'wrap' }}>
               <span><i className="fas fa-calendar-alt" /> {formatDate(post.publishedAt || post.createdAt)}</span>
               <span><i className="fas fa-user" /> {post.author?.name || 'Jatin Kumar'}</span>
@@ -174,11 +190,32 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
               />
             )}
 
+            <HeadingLinks />
             <div
               className="post-body entry-content"
               style={{ fontSize: '1rem', lineHeight: 1.8, color: 'var(--text-light)' }}
               dangerouslySetInnerHTML={{ __html: post.content }}
             />
+
+            {/* AUTHOR BOX */}
+            <div className="author-box" style={{ marginTop: 30 }}>
+              <div className="author-box-avatar">👤</div>
+              <div className="author-box-info">
+                <div className="author-box-name">{post.author?.name || 'Jatin Kumar'}</div>
+                <div className="author-box-role" data-i18n="author.role">Data Analyst & Educator</div>
+                <p className="author-box-bio">
+                  Python, SQL, Power BI aur Excel mein practical tutorials likhta hoon —
+                  taaki data analytics seekhna aasan ho. Portfolio: jatinanalytics.co.in
+                </p>
+                <div className="author-box-links">
+                  <a href="https://jatinanalytics.co.in" target="_blank" rel="noopener"><i className="fas fa-globe" /> Portfolio</a>
+                  <a href="https://linkedin.com/in/jatin-kumar-5a46a720a" target="_blank" rel="noopener"><i className="fab fa-linkedin" /> LinkedIn</a>
+                  <a href="https://github.com/jating1416-debug" target="_blank" rel="noopener"><i className="fab fa-github" /> GitHub</a>
+                  <a href="https://kaggle.com/jatinkhandelwal112" target="_blank" rel="noopener"><i className="fab fa-kaggle" /> Kaggle</a>
+                  <a href="/author"><i className="fas fa-file-lines" /> All Articles</a>
+                </div>
+              </div>
+            </div>
 
             {/* Prev / Next */}
             <div className="post-nav" style={{ display: 'flex', justifyContent: 'space-between', gap: 14, margin: '30px 0 10px', flexWrap: 'wrap' }}>
@@ -230,6 +267,13 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
 
         <SidebarClient />
       </div>
+
+      {/* CLIENT WIDGETS: view counter + processor + playground + history */}
+      <ViewCounter articleId={post.id} />
+      <PostProcessor html={post.content} />
+      <TryInPlayground />
+      <FeedbackWidget />
+      <script dangerouslySetInnerHTML={{ __html: `try { localStorage.setItem('di_current_post', JSON.stringify({ title: ${JSON.stringify(post.title)}, url: ${JSON.stringify('/' + catSlug + '/' + post.slug)} })); } catch(e){}` }} />
     </>
   );
 }

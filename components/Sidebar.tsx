@@ -94,7 +94,7 @@ export default function Sidebar({
 
       {/* ANALYST TOOLKIT */}
       <div className="sidebar-widget">
-        <div className="widget-title"><i className="fas fa-toolbox" /> Analyst Toolkit</div>
+        <div className="widget-title"><i className="fas fa-toolbox" /> <span data-i18n="sidebar.toolkit">Analyst Toolkit</span></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
           {TOOLKIT.map((t) => (
             <Link key={t.slug} href={`/tools/${t.slug}`} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 10px', textDecoration: 'none', color: 'var(--text-dark)', fontSize: '0.78rem', fontWeight: 600, textAlign: 'center' }}>
@@ -106,7 +106,7 @@ export default function Sidebar({
 
       {/* DEVELOPER TOOLBOX */}
       <div className="sidebar-widget">
-        <div className="widget-title"><i className="fas fa-wrench" /> Developer Toolbox</div>
+        <div className="widget-title"><i className="fas fa-wrench" /> <span data-i18n="sidebar.toolbox">Developer Toolbox</span></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
           {TOOLBOX.map((t) => (
             <Link key={t.slug} href={`/tools/${t.slug}`} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 10px', textDecoration: 'none', color: 'var(--text-dark)', fontSize: '0.78rem', fontWeight: 600, textAlign: 'center' }}>
@@ -118,7 +118,7 @@ export default function Sidebar({
 
       {/* ALL TOOLS */}
       <div className="sidebar-widget">
-        <div className="widget-title"><i className="fas fa-tools" /> All Tools</div>
+        <div className="widget-title"><i className="fas fa-tools" /> <span data-i18n="sidebar.alltools">All Tools</span></div>
         <ul className="hub-list" style={{ maxHeight: 220, overflowY: 'auto' }}>
           {TOOLS.map((t) => (
             <li key={t.slug}>
@@ -131,7 +131,7 @@ export default function Sidebar({
       </div>
 
       <div className="sidebar-widget">
-        <div className="widget-title"><i className="fas fa-layer-group" /> Categories</div>
+        <div className="widget-title"><i className="fas fa-layer-group" /> <span data-i18n="sidebar.categories">Categories</span></div>
         <ul className="category-list">
           {categories.map((c) => (
             <li className="category-item" key={c.slug}>
@@ -146,7 +146,7 @@ export default function Sidebar({
       </div>
 
       <div className="sidebar-widget">
-        <div className="widget-title"><i className="fas fa-clock" /> Recent Posts</div>
+        <div className="widget-title"><i className="fas fa-clock" /> <span data-i18n="sidebar.recent">Recent Posts</span></div>
         <ul className="recent-posts-list">
           {recent.map((p) => (
             <li className="recent-post-item" key={p.slug}>
@@ -160,7 +160,7 @@ export default function Sidebar({
       </div>
 
       <div className="sidebar-widget">
-        <div className="widget-title"><i className="fas fa-fire" /> Popular Posts</div>
+        <div className="widget-title"><i className="fas fa-fire" /> <span data-i18n="sidebar.popular">Popular Posts</span></div>
         <ul className="recent-posts-list">
           {popular.map((p) => (
             <li className="recent-post-item" key={p.slug}>
@@ -168,7 +168,7 @@ export default function Sidebar({
                 <Link href={`/${p.categorySlug}/${p.slug}`}>{p.title}</Link>
                 <div className="recent-post-date">
                   {/* Views SIRF admin ko dikhte hain - public pe "Trending" label */}
-                  <i className="fas fa-fire" /> Trending
+                  <i className="fas fa-fire" /> <span data-i18n="sidebar.trending">Trending</span>
                 </div>
               </div>
             </li>
@@ -234,7 +234,7 @@ function ReadingListWidget() {
   if (items.length === 0) {
     return (
       <div className="sidebar-widget">
-        <div className="widget-title"><i className="fas fa-bookmark" /> Reading List</div>
+        <div className="widget-title"><i className="fas fa-bookmark" /> <span data-i18n="sidebar.reading">Reading List</span></div>
         <p style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Post pe 🔖 Save dabao — yahan dikhega!</p>
       </div>
     );
@@ -242,7 +242,7 @@ function ReadingListWidget() {
 
   return (
     <div className="sidebar-widget">
-      <div className="widget-title"><i className="fas fa-bookmark" /> Reading List</div>
+      <div className="widget-title"><i className="fas fa-bookmark" /> <span data-i18n="sidebar.reading">Reading List</span></div>
       <ul className="recent-posts-list">
         {items.map((it) => (
           <li className="recent-post-item" key={it.url}>

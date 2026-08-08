@@ -21,9 +21,9 @@ export default function ToolsStrip() {
     <div className="tools-strip">
       <div className="tools-strip-head">
         <span className="section-chip"><i className="fas fa-toolbox" /></span>
-        <span className="tools-strip-title">Free Analyst Tools</span>
+        <span className="tools-strip-title" data-i18n="sec.tools">Free Analyst Tools</span>
         <Link href="/tools" className="tools-strip-all">
-          View all <i className="fas fa-arrow-right" />
+          <span>View all</span> <i className="fas fa-arrow-right" />
         </Link>
       </div>
       <div className="tools-strip-grid">

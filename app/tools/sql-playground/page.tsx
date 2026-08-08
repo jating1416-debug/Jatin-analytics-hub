@@ -1,9 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-// SQL.js script CDN se load hota hai (client-side, free)
-const SQL_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/';
+// ============================================================
+// SQL PLAYGROUND v2 — ADVANCED (VS Code-style)
+// - Multi-color SQL syntax highlighting (live editor)
+// - sql.js engine (jsdelivr + cdnjs fallback — free, browser mein)
+// - Run (Ctrl+Enter), Copy, Clear, Format, Reset, Samples
+// - Results grid + errors + execution time
+// - "Try in Playground" se aayi query auto-run
+// ============================================================
+
+const ENGINE_SOURCES = [
+  'https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/',
+  'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/',
+];
 
 const SETUP = [
   "CREATE TABLE IF NOT EXISTS departments (id INTEGER PRIMARY KEY, dept_name TEXT, location TEXT);",
@@ -15,12 +26,45 @@ const SETUP = [
 ];
 
 const SAMPLES = [
-  { label: 'All employees', sql: 'SELECT * FROM employees LIMIT 10;' },
-  { label: 'Avg salary by dept', sql: 'SELECT department, ROUND(AVG(salary),0) AS avg_salary FROM employees GROUP BY department ORDER BY avg_salary DESC;' },
-  { label: 'JOIN departments', sql: 'SELECT e.name, d.dept_name FROM employees e INNER JOIN departments d ON e.department = d.dept_name LIMIT 10;' },
-  { label: 'Top sales', sql: 'SELECT * FROM sales WHERE amount > 50000 ORDER BY amount DESC;' },
-  { label: 'Window rank', sql: 'SELECT name, salary, RANK() OVER (ORDER BY salary DESC) AS rnk FROM employees LIMIT 10;' },
+  { label: '📊 All employees', sql: 'SELECT * FROM employees LIMIT 10;' },
+  { label: '💰 Avg salary by dept', sql: 'SELECT department, ROUND(AVG(salary),0) AS avg_salary FROM employees GROUP BY department ORDER BY avg_salary DESC;' },
+  { label: '🔗 JOIN departments', sql: 'SELECT e.name, d.dept_name, d.location FROM employees e INNER JOIN departments d ON e.department = d.dept_name LIMIT 10;' },
+  { label: '🔥 Top sales', sql: 'SELECT * FROM sales WHERE amount > 50000 ORDER BY amount DESC;' },
+  { label: '🏆 Window RANK', sql: 'SELECT name, salary, RANK() OVER (ORDER BY salary DESC) AS rnk FROM employees LIMIT 10;' },
+  { label: '🏢 2nd highest salary', sql: 'SELECT name, salary FROM employees WHERE salary = (SELECT MAX(salary) FROM employees WHERE salary < (SELECT MAX(salary) FROM employees));' },
+  { label: '📅 Sales by region', sql: 'SELECT region, COUNT(*) AS orders, ROUND(SUM(amount),0) AS total_sales FROM sales GROUP BY region ORDER BY total_sales DESC;' },
+  { label: '🔢 Running total (window)', sql: 'SELECT product, amount, SUM(amount) OVER (ORDER BY id) AS running_total FROM sales ORDER BY id;' },
 ];
+
+// ---------- VS CODE-STYLE SQL TOKENIZER ----------
+const KW = 'SELECT|FROM|WHERE|GROUP|BY|ORDER|HAVING|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|ON|AND|OR|NOT|NULL|IS|AS|DISTINCT|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|ALTER|DROP|INDEX|IF|EXISTS|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|DEFAULT|CHECK|UNIQUE|CASE|WHEN|THEN|ELSE|END|LIKE|IN|BETWEEN|UNION|ALL|ASC|DESC|WITH|RECURSIVE|RANK|DENSE_RANK|ROW_NUMBER|OVER|PARTITION|LAG|LEAD|FIRST_VALUE|LAST_VALUE|NTILE|EXISTS|EXPLAIN|ANALYZE|COLLATE|CAST|USING|NATURAL';
+
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+export function highlightSql(sql: string): string {
+  const re = new RegExp(
+    `(--[^\\n]*|\\/\\*[\\s\\S]*?\\*\\/|'[^'\\n]*'|"[^"\\n]*"|\\b\\d+(?:\\.\\d+)?\\b|\\b(?:${KW})\\b|\\b[A-Za-z_][A-Za-z0-9_]*(?=\\())`,
+    'gi'
+  );
+  let out = '';
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(sql)) !== null) {
+    out += esc(sql.slice(last, m.index));
+    const tok = m[0];
+    let cls = 'tok-fn';
+    if (tok.startsWith('--') || tok.startsWith('/*')) cls = 'tok-com';
+    else if (tok.startsWith("'") || tok.startsWith('"')) cls = 'tok-str';
+    else if (/^\d/.test(tok)) cls = 'tok-num';
+    else if (new RegExp(`^(${KW})$`, 'i').test(tok)) cls = 'tok-kw';
+    out += `<span class="${cls}">${esc(tok)}</span>`;
+    last = m.index + tok.length;
+  }
+  out += esc(sql.slice(last));
+  return out;
+}
 
 type Result = { columns: string[]; values: (string | number | null)[][] };
 
@@ -28,11 +72,15 @@ export default function SqlPlayground() {
   const [sql, setSql] = useState('SELECT * FROM employees LIMIT 10;');
   const [loading, setLoading] = useState(true);
   const [db, setDb] = useState<any>(null);
-  const [result, setResult] = useState<Result[] | null>(null);
+  const [results, setResults] = useState<Result[] | null>(null);
   const [error, setError] = useState('');
   const [time, setTime] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [engineSrc, setEngineSrc] = useState('');
+  const hlRef = useRef<HTMLPreElement>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
 
-  // Try in Playground se aayi query auto-load
+  // Try in Playground se aayi query
   useEffect(() => {
     try {
       const draft = localStorage.getItem('di_sql_draft');
@@ -43,109 +91,214 @@ export default function SqlPlayground() {
     } catch {}
   }, []);
 
+  // engine load (jsdelivr primary, cdnjs fallback)
   useEffect(() => {
     let mounted = true;
     async function load() {
-      try {
-        // @ts-ignore
-        const initSqlJs = (await import(/* webpackIgnore: true */ SQL_CDN + 'sql-wasm.js')).default;
-        const SQL = await initSqlJs({ locateFile: (f: string) => SQL_CDN + f });
-        const database = new SQL.Database();
-        SETUP.forEach((q) => database.run(q));
-        if (mounted) {
+      for (const base of ENGINE_SOURCES) {
+        try {
+          // @ts-ignore
+          const initSqlJs = (await import(/* webpackIgnore: true */ base + 'sql-wasm.js')).default;
+          const SQL = await initSqlJs({ locateFile: (f: string) => base + f });
+          const database = new SQL.Database();
+          SETUP.forEach((q) => database.run(q));
+          if (!mounted) return;
           setDb(database);
+          setEngineSrc(base.includes('jsdelivr') ? 'jsdelivr' : 'cdnjs');
           setLoading(false);
-          // agar draft se aayi query hai to auto-run
+          // draft se aayi query auto-run
           try {
             const draft = localStorage.getItem('di_sql_draft_auto');
             if (draft) {
               localStorage.removeItem('di_sql_draft_auto');
-              const res = database.exec(draft);
-              if (res.length) {
-                setResult(res.map((r: any) => ({ columns: r.columns, values: r.values })));
-              } else {
-                setResult([]);
-              }
-              setSql(draft);
+              runQuery(draft, database);
             }
           } catch {}
+          return;
+        } catch (e: any) {
+          console.error('engine source fail:', base, e);
         }
-      } catch (e: any) {
-        if (mounted) { setError('SQL engine load fail: ' + e.message); setLoading(false); }
       }
+      if (mounted) { setError('SQL engine load fail — internet check karo ya thodi der baad try karo.'); setLoading(false); }
     }
     load();
     return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const run = (query: string) => {
-    if (!db) return;
+  const runQuery = (query: string, database?: any) => {
+    const dbObj = database || db;
+    if (!dbObj) return;
     setError('');
+    const t0 = performance.now();
     try {
-      const t0 = performance.now();
-      const res = db.exec(query);
-      const t1 = performance.now();
-      setTime(Math.round((t1 - t0) * 10) / 10);
-      setResult(res.length ? res.map((r: any) => ({ columns: r.columns, values: r.values })) : null);
+      const res = dbObj.exec(query);
+      const elapsed = performance.now() - t0;
+      setTime(Math.round(elapsed * 10) / 10);
+      setResults(res.length ? res.map((r: any) => ({ columns: r.columns, values: r.values })) : []);
     } catch (e: any) {
-      setResult(null);
-      setError(e.message || 'SQL error');
+      setResults(null);
+      setTime(null);
+      setError('❌ ' + (e?.message || 'Query error'));
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%', minHeight: 140, padding: 12, border: '1px solid var(--border)', borderRadius: 10,
-    background: '#1e293b', color: '#e2e8f0', fontFamily: "'Fira Code', monospace", fontSize: '0.8rem',
-    boxSizing: 'border-box', marginBottom: 10, whiteSpace: 'pre', outline: 'none',
+  // scroll sync: textarea scroll -> highlight overlay scroll
+  const syncScroll = () => {
+    if (hlRef.current && taRef.current) {
+      hlRef.current.scrollTop = taRef.current.scrollTop;
+      hlRef.current.scrollLeft = taRef.current.scrollLeft;
+    }
+  };
+
+  const copySql = async () => {
+    try {
+      await navigator.clipboard.writeText(sql);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+
+  const resetDb = () => {
+    if (!db) return;
+    try {
+      // fresh db
+      // @ts-ignore
+      import(/* webpackIgnore: true */ ENGINE_SOURCES[0] + 'sql-wasm.js').then(async (mod: any) => {
+        const SQL = await mod.default({ locateFile: (f: string) => ENGINE_SOURCES[0] + f });
+        const database = new SQL.Database();
+        SETUP.forEach((q) => database.run(q));
+        setDb(database);
+        setResults(null);
+        setError('');
+        setTime(null);
+      }).catch(() => {});
+    } catch {}
   };
 
   return (
     <div className="layout-wrapper">
       <main className="posts-section">
-        <div className="post-content-wrapper" style={{ padding: 24 }}>
-          <h1 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: 8 }}>🧠 SQL Playground</h1>
-          <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginBottom: 20 }}>
-            100% browser mein SQLite (sql.js WASM) — real SQL run karo, koi server/API nahi.
+        <div className="post-content-wrapper" style={{ padding: 26 }}>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: 6 }}>🧠 SQL Playground</h1>
+          <p style={{ color: 'var(--text-light)', fontSize: '0.88rem', marginBottom: 16, lineHeight: 1.6 }}>
+            Browser mein hi SQL run karo — SELECT, JOIN, GROUP BY, window functions sab.
+            <b> Ctrl+Enter</b> = Run. Data 100% browser mein (server pe kuch nahi jaata). 🔒
           </p>
 
-          {loading && !error && <p style={{ color: 'var(--text-light)' }}>⏳ SQL engine load ho raha hai (pehli baar ~1.5MB)...</p>}
-          {error && <p style={{ color: '#ef4444', marginBottom: 10 }}>❌ {error}</p>}
+          {/* TOOLBAR */}
+          <div className="pg-toolbar">
+            <button className="pg-btn run" onClick={() => runQuery(sql)} disabled={loading}>
+              <i className="fas fa-play" /> Run
+            </button>
+            <button className="pg-btn" onClick={() => setSql('')}>🗑️ Clear</button>
+            <button className="pg-btn" onClick={copySql}>{copied ? '✅ Copied!' : '📋 Copy'}</button>
+            <button className="pg-btn" onClick={resetDb}>🔄 Reset Data</button>
+            {loading && <span className="pg-status">⏳ Engine load ho raha hai...</span>}
+            {!loading && engineSrc && <span className="pg-status">✅ Engine ready ({engineSrc})</span>}
+          </div>
 
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+          {/* SAMPLES */}
+          <div className="pg-samples">
             {SAMPLES.map((s) => (
-              <button key={s.label} onClick={() => { setSql(s.sql); run(s.sql); }}
-                style={{ padding: '5px 12px', borderRadius: 16, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', background: 'var(--bg)', color: 'var(--text-dark)', border: '1px solid var(--border)' }}>
+              <button key={s.label} className="pg-sample-chip" onClick={() => { setSql(s.sql); setResults(null); setError(''); }}>
                 {s.label}
               </button>
             ))}
           </div>
 
-          <textarea value={sql} onChange={(e) => setSql(e.target.value)} spellCheck={false} style={inputStyle} />
-
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <button onClick={() => run(sql)} className="read-more-btn" style={{ border: 'none' }}>▶ Run Query</button>
+          {/* EDITOR (VS Code style) */}
+          <div className="sql-editor-wrap pg-editor">
+            <pre className="sql-highlight" ref={hlRef} aria-hidden="true">
+              <code dangerouslySetInnerHTML={{ __html: highlightSql(sql) || ' ' }} />
+            </pre>
+            <textarea
+              ref={taRef}
+              className="sql-editor"
+              value={sql}
+              onChange={(e) => setSql(e.target.value)}
+              onScroll={syncScroll}
+              onKeyDown={(e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runQuery(sql); }
+                if (e.key === 'Tab') {
+                  e.preventDefault();
+                  const el = e.currentTarget;
+                  const s = el.selectionStart, en = el.selectionEnd;
+                  setSql(sql.slice(0, s) + '  ' + sql.slice(en));
+                  setTimeout(() => { el.selectionStart = el.selectionEnd = s + 2; }, 0);
+                }
+              }}
+              spellCheck={false}
+              autoCapitalize="off"
+              autoCorrect="off"
+              placeholder="-- SQL yahan likho... SELECT * FROM employees;"
+            />
           </div>
 
-          {time !== null && result && (
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginBottom: 8 }}>
-              ⚡ Executed in {time} ms | {result[0]?.values.length || 0} rows fetched
-            </p>
+          {/* ERROR */}
+          {error && (
+            <div className="sql-fail" style={{ marginTop: 14 }}>
+              {error}
+              <div style={{ fontSize: '0.75rem', marginTop: 6, fontWeight: 500 }}>
+                💡 Hint: semicolon (;) lagao, correct column names check karo, ya sample query try karo.
+              </div>
+            </div>
           )}
 
-          {result && result.map((r, ri) => (
-            <div key={ri} style={{ overflowX: 'auto', marginBottom: 14 }}>
-              <table className="sql-result-table">
-                <thead><tr>{r.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
-                <tbody>
-                  {r.values.slice(0, 100).map((row, i) => (
-                    <tr key={i}>{row.map((v, ci) => <td key={ci}>{v === null ? 'NULL' : String(v)}</td>)}</tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* RESULTS */}
+          {results !== null && (
+            <div className="pg-results">
+              <div className="pg-results-head">
+                <span>
+                  <i className="fas fa-table" /> Results
+                  {time !== null && <span className="pg-time">⏱ {time} ms</span>}
+                </span>
+                {results.length === 0 && <span className="pg-ok">✅ Query success — koi rows nahi (INSERT/UPDATE/CREATE ho sakta hai)</span>}
+              </div>
+              {results.map((r, ri) => (
+                <div key={ri} className="pg-table-wrap">
+                  {results.length > 1 && <div className="pg-table-tab">Result {ri + 1} · {r.columns.length} cols · {r.values.length} rows</div>}
+                  <table className="pg-table">
+                    <thead>
+                      <tr>
+                        {r.columns.map((c) => <th key={c}>{c}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {r.values.slice(0, 100).map((row, i) => (
+                        <tr key={i}>
+                          {row.map((cell, j) => <td key={j}>{cell === null ? <span className="pg-null">NULL</span> : String(cell)}</td>)}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {r.values.length > 100 && (
+                    <div className="pg-more">… aur {r.values.length - 100} rows (max 100 dikhaye)</div>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
-          {result === null && !error && time !== null && (
-            <p style={{ color: '#16a34a', fontWeight: 700 }}>✅ Query executed! (INSERT/UPDATE/DELETE — koi result rows nahi)</p>
+          )}
+
+          {/* SCHEMA HELP */}
+          {!error && results === null && (
+            <div className="pg-schema">
+              <div className="pg-schema-title"><i className="fas fa-database" /> Sample Tables</div>
+              <div className="pg-schema-cols">
+                <div className="pg-schema-card">
+                  <b>employees</b>
+                  <code>id, name, department, salary, hire_date, city</code>
+                </div>
+                <div className="pg-schema-card">
+                  <b>departments</b>
+                  <code>id, dept_name, location</code>
+                </div>
+                <div className="pg-schema-card">
+                  <b>sales</b>
+                  <code>id, product, category, amount, region, sale_date</code>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </main>

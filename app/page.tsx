@@ -20,7 +20,7 @@ export default function HomePage() {
           <HotPicksCarousel />
           <h2 className="section-title">
             <span className="section-chip"><i className="fas fa-newspaper" /></span>
-            Latest Articles
+            <span data-i18n="sec.latest">Latest Articles</span>
           </h2>
           {/* SMOOTH - client-side filter + pagination (bina reload) */}
           <PostList />

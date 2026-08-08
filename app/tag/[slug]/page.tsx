@@ -5,7 +5,7 @@ import ArticleCard from '@/components/ArticleCard';
 import Pagination from '@/components/Pagination';
 import { POSTS_PER_PAGE, SITE_URL } from '@/lib/utils';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60; // ISR - 60s cache (fast repeat visits)
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;

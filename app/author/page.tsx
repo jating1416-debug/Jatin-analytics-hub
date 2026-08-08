@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import ArticleCard from '@/components/ArticleCard';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60; // ISR - 60s cache (fast repeat visits)
 
 export const metadata: Metadata = {
   title: 'Jatin Kumar — Author',

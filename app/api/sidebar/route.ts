@@ -7,6 +7,9 @@ import { formatDate } from '@/lib/utils';
 // NOTE: popular views hamesha 0 bhejte hain -> views SIRF admin ko dikhte hain
 export const dynamic = 'force-dynamic';
 
+// CDN cache 60s -> sidebar/hot-picks repeat visits pe INSTANT
+const CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' };
+
 export async function GET() {
   let categories: any[] = [];
   let recent: any[] = [];
@@ -92,5 +95,5 @@ export async function GET() {
     })),
     totalPosts,
     totalCategories,
-  });
+  }, { headers: CACHE_HEADERS });
 }

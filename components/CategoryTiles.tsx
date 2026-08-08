@@ -38,7 +38,7 @@ export default function CategoryTiles() {
         {cats.slice(0, 8).map((c) => (
           <Link
             key={c.slug}
-            href={`/?cat=${c.slug}`}
+            href={`/category/${c.slug}`}
             className="category-tile"
             style={{ background: CAT_GRADS[c.slug] || 'var(--gradient)' }}
           >

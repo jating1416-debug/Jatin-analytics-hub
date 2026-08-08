@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { SITE_URL, SITE_NAME } from '@/lib/utils';
 
 // RSS FEED - /feed.xml (subscribers ke liye)
-export const dynamic = 'force-dynamic';
+export const revalidate = 60; // RSS 60s cache
 
 export async function GET() {
   try {

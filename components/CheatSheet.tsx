@@ -103,8 +103,14 @@ export default function CheatSheet() {
         setOpen((o) => !o);
       }
     };
+    // NAVBAR/CmdPalette button se bhi khule (CustomEvent) - FIX
+    const onOpenEvent = () => setOpen(true);
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    window.addEventListener('open-cheatsheet', onOpenEvent);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('open-cheatsheet', onOpenEvent);
+    };
   }, []);
 
   const current = CHEAT_SHEETS[tab];

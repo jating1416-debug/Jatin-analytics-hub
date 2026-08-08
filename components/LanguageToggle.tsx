@@ -1,38 +1,112 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-// MULTI-LANGUAGE (basic) - UI labels English/Hindi toggle
-// Content as-is, sirf UI text switch hota hai (localStorage mein save)
-const TEXTS = {
+// MULTI-LANGUAGE v2 - English/Hindi UI toggle
+// data-i18n="key" wale saare elements translate hote hain (nav, titles, tabs, footer...)
+// localStorage mein save + MutationObserver se naye elements pe bhi apply
+
+const TEXTS: Record<string, Record<string, string>> = {
   en: {
-    latest: '📝 Latest Articles',
-    readMore: 'Read More',
-    minRead: 'min read',
-    search: 'Search posts...',
-    home: '🏠 Home',
+    'nav.home': '🏠 Home',
+    'nav.downloads': '📥 Downloads',
+    'nav.portfolio': '🚀 My Portfolio',
+    'nav.cheatsheet': 'Cheat Sheet',
+    'nav.hub': 'Hub',
+    'nav.search': 'Search posts...',
+    'hero.tag': 'DATA ANALYTICS BLOG',
+    'hero.start': '📚 Start Learning',
+    'hero.tools': '🛠️ Free Tools',
+    'hero.scroll': 'Scroll to explore',
+    'sec.latest': 'Latest Articles',
+    'sec.tools': 'Free Analyst Tools',
+    'sec.hotpicks': 'Hot Picks',
+    'sec.hotpicks-sub': 'Sabse zabardast articles',
+    'f.all': 'All',
+    'f.readmore': 'Read More',
+    'f.minread': 'min read',
+    'sidebar.categories': 'Categories',
+    'sidebar.recent': 'Recent Posts',
+    'sidebar.popular': 'Popular Posts',
+    'sidebar.trending': 'Trending',
+    'sidebar.toolkit': 'Analyst Toolkit',
+    'sidebar.toolbox': 'Developer Toolbox',
+    'sidebar.alltools': 'All Tools',
+    'sidebar.reading': 'Reading List',
+    'footer.topics': 'Topics',
+    'footer.quick': 'Quick Links',
+    'footer.legal': 'Legal & Info',
+    'footer.rights': 'All Rights Reserved.',
+    'author.role': 'Data Analyst & Educator',
   },
   hi: {
-    latest: '📝 नवीनतम लेख',
-    readMore: 'और पढ़ें',
-    minRead: 'मिनट पढ़ाई',
-    search: 'पोस्ट खोजें...',
-    home: '🏠 होम',
+    'nav.home': '🏠 होम',
+    'nav.downloads': '📥 डाउनलोड',
+    'nav.portfolio': '🚀 मेरा पोर्टफोलियो',
+    'nav.cheatsheet': 'चीट शीट',
+    'nav.hub': 'हब',
+    'nav.search': 'पोस्ट खोजें...',
+    'hero.tag': 'डेटा एनालिटिक्स ब्लॉग',
+    'hero.start': '📚 सीखना शुरू करें',
+    'hero.tools': '🛠️ फ्री टूल्स',
+    'hero.scroll': 'नीचे स्क्रॉल करें',
+    'sec.latest': 'नवीनतम लेख',
+    'sec.tools': 'फ्री एनालिस्ट टूल्स',
+    'sec.hotpicks': 'टॉप पिक्स',
+    'sec.hotpicks-sub': 'सबसे शानदार आर्टिकल',
+    'f.all': 'सभी',
+    'f.readmore': 'और पढ़ें',
+    'f.minread': 'मिनट पढ़ाई',
+    'sidebar.categories': 'श्रेणियाँ',
+    'sidebar.recent': 'हाल के पोस्ट',
+    'sidebar.popular': 'लोकप्रिय पोस्ट',
+    'sidebar.trending': 'ट्रेंडिंग',
+    'sidebar.toolkit': 'एनालिस्ट टूलकिट',
+    'sidebar.toolbox': 'डेवलपर टूलबॉक्स',
+    'sidebar.alltools': 'सभी टूल्स',
+    'sidebar.reading': 'रीडिंग लिस्ट',
+    'footer.topics': 'विषय',
+    'footer.quick': 'त्वरित लिंक',
+    'footer.legal': 'कानूनी जानकारी',
+    'footer.rights': 'सर्वाधिकार सुरक्षित।',
+    'author.role': 'डेटा एनालिस्ट और एजुकेटर',
   },
 };
 
 export default function LanguageToggle() {
   const [lang, setLang] = useState<'en' | 'hi'>('en');
 
+  const applyLang = (l: 'en' | 'hi') => {
+    document.documentElement.setAttribute('data-lang', l);
+    const t = TEXTS[l];
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      const key = el.getAttribute('data-i18n');
+      if (key && t[key] && el.textContent) {
+        el.textContent = t[key];
+      }
+    });
+  };
+
+  useEffect(() => {
+    // saved lang apply karo + naye elements (posts load) pe bhi auto-apply
+    let saved: 'en' | 'hi' = 'en';
+    try { saved = localStorage.getItem('di_lang') === 'hi' ? 'hi' : 'en'; } catch {}
+    setLang(saved);
+    applyLang(saved);
+
+    const mo = typeof MutationObserver !== 'undefined'
+      ? new MutationObserver(() => applyLang(saved))
+      : null;
+    if (mo) mo.observe(document.body, { childList: true, subtree: true });
+    return () => { if (mo) mo.disconnect(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const toggle = () => {
     const next = lang === 'en' ? 'hi' : 'en';
     setLang(next);
     try { localStorage.setItem('di_lang', next); } catch {}
-    // Update visible UI texts
-    document.documentElement.setAttribute('data-lang', next);
-    const t = TEXTS[next];
-    const latest = document.querySelector('.section-title');
-    if (latest && (latest.textContent || '').includes('Latest')) latest.textContent = t.latest;
+    applyLang(next);
   };
 
   return (

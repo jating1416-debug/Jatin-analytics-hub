@@ -12,6 +12,7 @@ const FILTERS = [
   { key: 'python', label: 'Python' },
   { key: 'power-bi', label: 'Power BI' },
   { key: 'excel', label: 'Excel' },
+  { key: 'misc', label: 'Data Analytics' },
   { key: 'career', label: 'Career' },
   { key: 'interview-questions', label: 'Interview Q&A' },
   { key: 'case-study', label: 'Case Study' },
@@ -73,18 +74,19 @@ export default function PostList() {
   // URL ?cat= param read karo (nav tabs: /?cat=sql, /?cat=python ...)
   // taaki navbar ke tabs pe click karne pe filter turant lag jaye
   useEffect(() => {
-    try {
-      const p = new URLSearchParams(window.location.search).get('cat');
-      if (p && VALID_KEYS.has(p)) {
-        setCat(p);
-        // posts load hone ke baad list tak scroll
-        const scroll = setTimeout(() => {
-          const el = document.getElementById('post-list-anchor');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 450);
-        return () => clearTimeout(scroll);
-      }
-    } catch {}
+    const readParam = () => {
+      try {
+        const p = new URLSearchParams(window.location.search).get('cat');
+        if (p && VALID_KEYS.has(p)) {
+          setCat(p);
+          setPage(1);
+        }
+      } catch {}
+    };
+    readParam();
+    // back/forward button se bhi URL change ho to filter update
+    window.addEventListener('popstate', readParam);
+    return () => window.removeEventListener('popstate', readParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -158,7 +160,7 @@ export default function PostList() {
               onClick={() => onFilter(f.key)}
               style={{ transition: 'all 0.15s ease' }}
             >
-              {f.label}
+              {f.key === 'all' ? <span data-i18n="f.all">{f.label}</span> : f.label}
               <span
                 style={{
                   display: 'inline-block', marginLeft: 6,
@@ -230,7 +232,7 @@ export default function PostList() {
                   <span><i className="fas fa-user" /> {p.author?.name || 'Jatin Kumar'}</span>
                 </div>
                 <div className="reading-time" title="Reading time">
-                  <i className="fas fa-clock" /><span>{p.readingTime || 3} min read</span>
+                  <i className="fas fa-clock" /><span>{p.readingTime || 3} <span data-i18n="f.minread">min read</span></span>
                 </div>
                 <div className="post-title">
                   <Link href={`/${p.category?.slug || 'post'}/${p.slug}`}>{p.title}</Link>
@@ -241,7 +243,7 @@ export default function PostList() {
                     {p.category && <Link className="post-tag" href={`/category/${p.category.slug}`}>{p.category.name}</Link>}
                   </div>
                   <Link className="read-more-btn" href={`/${p.category?.slug || 'post'}/${p.slug}`}>
-                    Read More <i className="fas fa-arrow-right" />
+                    <span data-i18n="f.readmore">Read More</span> <i className="fas fa-arrow-right" />
                   </Link>
                 </div>
               </div>
