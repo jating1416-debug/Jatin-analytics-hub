@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import ArticleCard from '@/components/ArticleCard';
-import { formatDate } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,12 +10,31 @@ export const metadata: Metadata = {
 };
 
 export default async function AuthorPage() {
-  const articles = await prisma.article.findMany({
-    where: { status: 'PUBLISHED' },
-    include: { category: true, author: { select: { name: true } } },
-    orderBy: { publishedAt: 'desc' },
-    take: 100,
-  });
+  let articles: Awaited<ReturnType<typeof prisma.article.findMany>> = [];
+  let dbError = false;
+  try {
+    articles = await prisma.article.findMany({
+      where: { status: 'PUBLISHED' },
+      include: { category: true, author: { select: { name: true } } },
+      orderBy: { publishedAt: 'desc' },
+      take: 100,
+    });
+  } catch (e) {
+    dbError = true;
+    console.error('Author page DB error:', e);
+  }
+
+  if (dbError) {
+    return (
+      <div className="layout-wrapper">
+        <main className="posts-section">
+          <div className="category-empty" style={{ display: 'block' }}>
+            <p>⚠️ Database se connect nahi ho paya — thodi der baad refresh karo.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="layout-wrapper">

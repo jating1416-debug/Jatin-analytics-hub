@@ -9,13 +9,13 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const tag = await prisma.tag.findUnique({ where: { slug } });
-  if (!tag) return { title: 'Tag not found' };
-  return {
-    title: `${tag.name} — Posts`,
-    description: `All posts tagged with ${tag.name} on Data Insights.`,
-    alternates: { canonical: `${SITE_URL}/tag/${slug}` },
-  };
+  try {
+    const tag = await prisma.tag.findUnique({ where: { slug } });
+    if (!tag) return { title: 'Tag not found' };
+    return { title: `${tag.name} — Posts`, description: `All posts tagged with ${tag.name}.`, alternates: { canonical: `${SITE_URL}/tag/${slug}` } };
+  } catch {
+    return { title: 'Posts' };
+  }
 }
 
 export default async function TagPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ page?: string }> }) {
@@ -23,27 +23,43 @@ export default async function TagPage({ params, searchParams }: { params: Promis
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.page || '1', 10) || 1);
 
-  const tag = await prisma.tag.findUnique({ where: { slug } });
-  if (!tag) notFound();
+  let articles: Awaited<ReturnType<typeof prisma.article.findMany>> = [];
+  let total = 0;
+  let dbError = false;
 
-  const where = { status: 'PUBLISHED' as const, tags: { some: { tagId: tag.id } } };
-  const [articles, total] = await Promise.all([
-    prisma.article.findMany({
-      where,
-      include: { category: true, author: { select: { name: true } } },
-      orderBy: { publishedAt: 'desc' },
-      skip: (page - 1) * POSTS_PER_PAGE,
-      take: POSTS_PER_PAGE,
-    }),
-    prisma.article.count({ where }),
-  ]);
+  try {
+    const tag = await prisma.tag.findUnique({ where: { slug } });
+    if (!tag) notFound();
+    const where = { status: 'PUBLISHED' as const, tags: { some: { tagId: tag.id } } };
+    const [arts, cnt] = await Promise.all([
+      prisma.article.findMany({ where, include: { category: true, author: { select: { name: true } } }, orderBy: { publishedAt: 'desc' }, skip: (page - 1) * POSTS_PER_PAGE, take: POSTS_PER_PAGE }),
+      prisma.article.count({ where }),
+    ]);
+    articles = arts;
+    total = cnt;
+  } catch (e) {
+    dbError = true;
+    console.error('Tag page DB error:', e);
+  }
+
+  if (dbError) {
+    return (
+      <div className="layout-wrapper">
+        <main className="posts-section">
+          <div className="category-empty" style={{ display: 'block' }}>
+            <p>⚠️ Database se connect nahi ho paya — thodi der baad refresh karo.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / POSTS_PER_PAGE));
 
   return (
     <div className="layout-wrapper">
       <main className="posts-section">
-        <h2 className="section-title">🏷️ Tag: {tag.name} — {total} Posts</h2>
+        <h2 className="section-title">🏷️ Tag: {slug} — {total} Posts</h2>
         {articles.length === 0 ? (
           <div className="category-empty" style={{ display: 'block' }}>
             <p>😕 Is tag mein abhi koi post nahi hai.</p>
