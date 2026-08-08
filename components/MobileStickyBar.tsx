@@ -2,15 +2,27 @@
 
 import { useEffect, useState } from 'react';
 
-// MOBILE STICKY BAR - mobile pe neeche fixed (share + back to top)
+// MOBILE STICKY BAR - SIRF mobile pe (<=768px) neeche fixed (share + back to top)
+// FIX: pehle desktop pe bhi dikh raha tha -> footer cover ho jata tha
 export default function MobileStickyBar() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const isMobile = () => window.innerWidth <= 768;
-    const onScroll = () => setVisible(window.scrollY > 300);
+    const onScroll = () => {
+      const show = isMobile() && window.scrollY > 300;
+      setVisible(show);
+      // body class -> footer ko neeche padding milti hai taki bar se cover na ho
+      document.body.classList.toggle('mobile-bar-visible', show);
+    };
+    onScroll(); // initial state
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener('resize', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      document.body.classList.remove('mobile-bar-visible');
+    };
   }, []);
 
   const share = (kind: string) => {

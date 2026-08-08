@@ -23,6 +23,11 @@ export async function GET(req: NextRequest) {
       take: limit,
     });
 
+    // LOG SEARCH (admin "Top Searches" ke liye) - try/catch, kabhi fail nahi hoga
+    try {
+      await prisma.searchLog.create({ data: { term: q.toLowerCase().slice(0, 80) } });
+    } catch (e) { console.error('searchLog error:', e); }
+
     const results = articles.map((a) => ({
       title: a.title,
       url: `/${a.category?.slug || 'post'}/${a.slug}`,

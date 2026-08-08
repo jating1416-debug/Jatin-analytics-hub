@@ -10,6 +10,11 @@ export default function PostProcessor({ html }: { html: string }) {
     const body = document.querySelector('.post-body.entry-content');
     if (!body) return;
 
+    // ---------- LAZY IMAGES (speed) ----------
+    try {
+      processed = processed.replace(/<img\s/gi, '<img loading="lazy" decoding="async" ');
+    } catch {}
+
     // ---------- CALLOUT BOXES ----------
     const callouts: [RegExp, string, string][] = [
       [/\[tip\]([\s\S]*?)\[\/tip\]/g, 'tip', '💡 Tip'],

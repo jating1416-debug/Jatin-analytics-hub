@@ -15,6 +15,15 @@ const CAT_ICONS: Record<string, string> = {
 };
 const CAT_ICON = (slug: string | null | undefined) => CAT_ICONS[slug || ''] || '📝';
 
+// 7 din se kam purani post -> NEW badge
+function isNewPost(d: Date | string | null | undefined): boolean {
+  if (!d) return false;
+  try {
+    const diff = Date.now() - new Date(d).getTime();
+    return diff >= 0 && diff < 7 * 24 * 60 * 60 * 1000;
+  } catch { return false; }
+}
+
 export default function ArticleCard({ article }: { article: ArticleWithCategory }) {
   const catSlug = article.category?.slug || 'uncategorized';
   return (
@@ -22,6 +31,9 @@ export default function ArticleCard({ article }: { article: ArticleWithCategory 
       {/* PREMIUM THUMB STRIP - gradient + category icon */}
       <Link href={`/${catSlug}/${article.slug}`} className="post-thumb-strip" aria-label={article.title}>
         <span className="post-category-badge">{article.category?.name || 'Article'}</span>
+        {isNewPost(article.publishedAt || article.createdAt) && (
+          <span className="post-new-badge">✨ NEW</span>
+        )}
         <span className="post-thumb-icon">{CAT_ICON(article.category?.slug)}</span>
         <span className="thumb-arrow"><i className="fas fa-arrow-right" /></span>
       </Link>

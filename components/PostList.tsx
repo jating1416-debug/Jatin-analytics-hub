@@ -4,8 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 // INSTANT SMOOTH FILTER - saari posts EK BAAR fetch, tab click pe LOCAL filter
-// (koi server call nahi - turant switching, Blogger jaisa smooth)
-// + PREMIUM cards (gradient thumb strip, category icon, hover glow)
+// + PREMIUM cards + URL ?cat= support (nav tabs: /?cat=sql etc.)
 
 const FILTERS = [
   { key: 'all', label: 'All' },
@@ -18,6 +17,8 @@ const FILTERS = [
   { key: 'case-study', label: 'Case Study' },
   { key: 'error', label: 'error' },
 ];
+
+const VALID_KEYS = new Set(FILTERS.map((f) => f.key));
 
 // category → icon (thumb strip ke liye)
 const CAT_ICONS: Record<string, string> = {
@@ -53,12 +54,39 @@ function formatDate(d: string | null): string {
   catch { return ''; }
 }
 
+// 7 din se kam purani post -> NEW badge
+function isNewPost(d: string | null): boolean {
+  if (!d) return false;
+  try {
+    const diff = Date.now() - new Date(d).getTime();
+    return diff >= 0 && diff < 7 * 24 * 60 * 60 * 1000;
+  } catch { return false; }
+}
+
 export default function PostList() {
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [cat, setCat] = useState('all');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // URL ?cat= param read karo (nav tabs: /?cat=sql, /?cat=python ...)
+  // taaki navbar ke tabs pe click karne pe filter turant lag jaye
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search).get('cat');
+      if (p && VALID_KEYS.has(p)) {
+        setCat(p);
+        // posts load hone ke baad list tak scroll
+        const scroll = setTimeout(() => {
+          const el = document.getElementById('post-list-anchor');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 450);
+        return () => clearTimeout(scroll);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // EK BAAR fetch - saari posts summaries
   useEffect(() => {
@@ -107,6 +135,11 @@ export default function PostList() {
   const onFilter = (key: string) => {
     setCat(key);
     setPage(1);
+    // URL update (bina reload) - taaki back/forward bhi kaam kare
+    try {
+      const url = key === 'all' ? window.location.pathname : `/?cat=${key}`;
+      window.history.replaceState(null, '', url);
+    } catch {}
     const el = document.getElementById('post-list-anchor');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
@@ -184,6 +217,9 @@ export default function PostList() {
                 <span className="post-category-badge">
                   {p.category?.name || 'Article'}
                 </span>
+                {isNewPost(p.publishedAt || p.createdAt) && (
+                  <span className="post-new-badge">✨ NEW</span>
+                )}
                 <span className="post-thumb-icon">{CAT_ICON(p.category?.slug)}</span>
                 <span className="thumb-arrow"><i className="fas fa-arrow-right" /></span>
               </Link>

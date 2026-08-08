@@ -1,4 +1,4 @@
-// SEO: JSON-LD schema (BlogPosting + BreadcrumbList)
+// SEO: JSON-LD schema (BlogPosting + BreadcrumbList + FAQPage)
 export default function SchemaMarkup({
   title,
   url,
@@ -9,6 +9,7 @@ export default function SchemaMarkup({
   categoryName,
   categoryUrl,
   authorName,
+  faq,
 }: {
   title: string;
   url: string;
@@ -19,6 +20,7 @@ export default function SchemaMarkup({
   categoryName?: string;
   categoryUrl?: string;
   authorName: string;
+  faq?: { q: string; a: string }[];
 }) {
   const articleSchema = {
     '@context': 'https://schema.org',
@@ -44,6 +46,19 @@ export default function SchemaMarkup({
       }
     : null;
 
+  // FAQPage schema - Google rich results (post mein [faq] blocks ho to)
+  const faqSchema = faq && faq.length > 0
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faq.map((f) => ({
+          '@type': 'Question',
+          name: f.q,
+          acceptedAnswer: { '@type': 'Answer', text: f.a },
+        })),
+      }
+    : null;
+
   return (
     <>
       <script
@@ -54,6 +69,12 @@ export default function SchemaMarkup({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        />
+      )}
+      {faqSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
       )}
     </>

@@ -22,6 +22,46 @@ export default async function AdminAnalytics() {
       readingMinutes = allArts.reduce((s, a) => s + (a.readingTime || 3) * a.viewCount, 0);
     } catch {}
 
+    // VIEWS TREND - last 30 din (PageView table se, sirf admin)
+    let trend: { day: string; count: number }[] = [];
+    let topSearches: { term: string; count: number }[] = [];
+    try {
+      const since = new Date();
+      since.setDate(since.getDate() - 29);
+      since.setHours(0, 0, 0, 0);
+      const rows = await prisma.pageView.findMany({
+        where: { createdAt: { gte: since } },
+        select: { createdAt: true },
+      });
+      const byDay = new Map<string, number>();
+      rows.forEach((r) => {
+        const key = r.createdAt.toISOString().slice(0, 10);
+        byDay.set(key, (byDay.get(key) || 0) + 1);
+      });
+      // 30 din fill karo (0 wale din bhi)
+      trend = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        trend.push({ day: key, count: byDay.get(key) || 0 });
+      }
+    } catch (e) { console.error('trend error:', e); }
+
+    // TOP SEARCHES (SearchLog table - npx prisma db push ke baad live)
+    try {
+      const logs = await prisma.searchLog.findMany({
+        where: { createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
+        select: { term: true },
+      });
+      const byTerm = new Map<string, number>();
+      logs.forEach((l) => byTerm.set(l.term, (byTerm.get(l.term) || 0) + 1));
+      topSearches = Array.from(byTerm.entries())
+        .map(([term, count]) => ({ term, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+    } catch (e) { console.error('top searches error:', e); }
+
     stats = {
       totalViews: totalViews._sum.viewCount || 0,
       totalPosts,
@@ -37,6 +77,8 @@ export default async function AdminAnalytics() {
         }))
         .sort((a: any, b: any) => b.views - a.views),
       readingHours: Math.round(readingMinutes / 60),
+      trend,
+      topSearches,
     };
   } catch (e) {
     dbError = true;
@@ -80,7 +122,64 @@ export default async function AdminAnalytics() {
         <StatCard label="Reading Hours" value={stats.readingHours} icon="fa-book-open" grad="linear-gradient(135deg,#f43f5e,#e11d48)" />
       </div>
 
+      {/* VIEWS TREND - last 30 days */}
+      <div className="admin-panel" style={{ marginBottom: 18 }}>
+        <div className="admin-panel-head">
+          <h2><i className="fas fa-chart-line" /> Views — Last 30 Days</h2>
+          <span className="admin-chip">
+            {stats.trend.reduce((s: number, d: any) => s + d.count, 0)} views recorded
+          </span>
+        </div>
+        {stats.trend.length === 0 ? (
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>
+            Abhi data nahi — views record hone lageinge (PageView table).
+          </p>
+        ) : (
+          <div className="admin-trend">
+            {(() => {
+              const max = Math.max(1, ...stats.trend.map((d: any) => d.count));
+              const total = stats.trend.reduce((s: number, d: any) => s + d.count, 0);
+              return stats.trend.map((d: any) => (
+                <div key={d.day} className="admin-trend-col" title={`${d.day}: ${d.count} views`}>
+                  <div
+                    className="admin-trend-bar"
+                    style={{ height: `${Math.max(3, (d.count / max) * 100)}%` }}
+                  />
+                  <span className="admin-trend-day">{d.day.slice(8)}</span>
+                </div>
+              ));
+            })()}
+          </div>
+        )}
+      </div>
+
       <div className="admin-dash-grid">
+        {/* TOP SEARCHES */}
+        <div className="admin-panel">
+          <div className="admin-panel-head">
+            <h2><i className="fas fa-magnifying-glass" /> Top Searches (30 days)</h2>
+            {stats.topSearches.length === 0 && <span className="admin-chip">db push pending</span>}
+          </div>
+          {stats.topSearches.length === 0 ? (
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-light)', lineHeight: 1.7 }}>
+              Logo ne kya search kiya ye yahan dikhega. Search hone shuru hone ke baad data bhar
+              jayega. (SearchLog table)
+            </p>
+          ) : (
+            <div className="admin-bars">
+              {stats.topSearches.map((s: any) => (
+                <div key={s.term} className="admin-bar-row">
+                  <span className="admin-bar-label">🔍 {s.term}</span>
+                  <div className="admin-bar-track">
+                    <div className="admin-bar-fill" style={{ width: `${Math.max(5, (s.count / stats.topSearches[0].count) * 100)}%` }} />
+                  </div>
+                  <span className="admin-bar-value">{s.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* DONUT: PUBLISHED VS DRAFT */}
         <div className="admin-panel">
           <div className="admin-panel-head">

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import SeoChecker from '@/components/admin/SeoChecker';
 
 type Category = { id: number; name: string; slug: string };
 
@@ -206,6 +207,9 @@ export default function ArticleEditor({
       {msg && (
         <p style={{ color: msg.type === 'ok' ? '#16a34a' : '#ef4444', fontSize: '0.88rem', marginBottom: 12 }}>{msg.text}</p>
       )}
+
+      {/* SEO CHECKER - live (Yoast jaisa) */}
+      <SeoChecker title={title} metaDescription={metaDescription} slug={slug} content={content} tags={tags} />
 
       <label style={labelStyle}>Title *</label>
       <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Post ka title" />

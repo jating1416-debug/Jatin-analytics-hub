@@ -31,12 +31,9 @@ export default async function TagPage({ params, searchParams }: { params: Promis
     const tag = await prisma.tag.findUnique({ where: { slug } });
     if (!tag) notFound();
     const where = { status: 'PUBLISHED' as const, tags: { some: { tagId: tag.id } } };
-    const [arts, cnt] = await Promise.all([
-      prisma.article.findMany({ where, include: { category: true, author: { select: { name: true } } }, orderBy: { publishedAt: 'desc' }, skip: (page - 1) * POSTS_PER_PAGE, take: POSTS_PER_PAGE }),
-      prisma.article.count({ where }),
-    ]);
-    articles = arts;
-    total = cnt;
+    // SEQUENTIAL (pooler connection_limit=1 ke saath Promise.all avoid)
+    articles = await prisma.article.findMany({ where, include: { category: true, author: { select: { name: true } } }, orderBy: { publishedAt: 'desc' }, skip: (page - 1) * POSTS_PER_PAGE, take: POSTS_PER_PAGE });
+    total = await prisma.article.count({ where });
   } catch (e) {
     dbError = true;
     console.error('Tag page DB error:', e);

@@ -166,7 +166,10 @@ export default function Sidebar({
             <li className="recent-post-item" key={p.slug}>
               <div className="recent-post-info">
                 <Link href={`/${p.categorySlug}/${p.slug}`}>{p.title}</Link>
-                <div className="recent-post-date"><i className="fas fa-eye" /> {p.views} reads</div>
+                <div className="recent-post-date">
+                  {/* Views SIRF admin ko dikhte hain - public pe "Trending" label */}
+                  <i className="fas fa-fire" /> Trending
+                </div>
               </div>
             </li>
           ))}

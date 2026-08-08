@@ -2,20 +2,30 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import TableOfContents from '@/components/TableOfContents';
-import Sidebar from '@/components/Sidebar';
+import SidebarClient from '@/components/SidebarClient';
 import ViewCounter from '@/components/ViewCounter';
 import PostProcessor from '@/components/PostProcessor';
 import SchemaMarkup from '@/components/SchemaMarkup';
+import FeedbackWidget from '@/components/FeedbackWidget';
+import FontSizeAdjuster from '@/components/FontSizeAdjuster';
+import CommentsSection from '@/components/CommentsSection';
+import TryInPlayground from '@/components/TryInPlayground';
+import { addToHistory } from '@/components/ReadingHistory';
 import { SITE_URL, formatDate, excerptFrom } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string; slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const post = await prisma.article.findUnique({
-    where: { slug },
-    include: { category: true },
-  });
+  let post: Awaited<ReturnType<typeof prisma.article.findUnique>> = null;
+  try {
+    post = await prisma.article.findUnique({
+      where: { slug },
+      include: { category: true },
+    });
+  } catch (e) {
+    console.error('article metadata error:', e);
+  }
   if (!post || post.status !== 'PUBLISHED') return { title: 'Post not found' };
 
   const title = post.metaTitle || post.title;
@@ -40,7 +50,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
   try {
     post = await prisma.article.findUnique({
       where: { slug },
-      include: { category: true, author: { select: { name: true } } },
+      include: { category: true, author: { select: { name: true } }, tags: { include: { tag: true } } },
     });
   } catch (e) {
     dbError = true;
@@ -55,6 +65,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
           </div>
           <ViewCounter articleId={post.id} />
           <PostProcessor html={post.content} />
+          <TryInPlayground />
+          <script dangerouslySetInnerHTML={{ __html: `try { localStorage.setItem('di_current_post', JSON.stringify({ title: ${JSON.stringify(post.title)}, url: ${JSON.stringify('/' + catSlug + '/' + post.slug)} })); } catch(e){}` }} />
+          <FeedbackWidget />
         </main>
       </div>
     );
@@ -64,44 +77,47 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
   // increment view count (fire and forget)
   prisma.article.update({ where: { id: post.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
 
+  // tags for related-by-tag
+  const postTagIds = post.tags?.map((t) => t.tagId) || [];
+
   const catSlug = post.category?.slug || 'post';
   const url = `${SITE_URL}/${catSlug}/${post.slug}`;
 
-  // related: same category
-  const related = await prisma.article.findMany({
-    where: { status: 'PUBLISHED', categoryId: post.categoryId, id: { not: post.id } },
-    include: { category: true },
-    orderBy: { publishedAt: 'desc' },
-    take: 3,
-  });
-
-  // sidebar data
-  let categories: { name: string; slug: string; _count: { articles: number } }[] = [];
-  let recent: any[] = [];
-  let popular: any[] = [];
+  // related: pehle same-tag posts, warna same category
+  let related: any[] = [];
   try {
-    [categories, recent, popular] = await Promise.all([
-      prisma.category.findMany({ include: { _count: { select: { articles: true } } }, orderBy: { name: 'asc' } }),
-      prisma.article.findMany({ where: { status: 'PUBLISHED' }, include: { category: true }, orderBy: { publishedAt: 'desc' }, take: 5 }),
-      prisma.article.findMany({ where: { status: 'PUBLISHED' }, include: { category: true }, orderBy: { viewCount: 'desc' }, take: 5 }),
-    ]);
-  } catch (e) {
-    console.error('Sidebar data error:', e);
-  }
+    if (postTagIds.length > 0) {
+      related = await prisma.article.findMany({
+        where: { status: 'PUBLISHED', id: { not: post.id }, tags: { some: { tagId: { in: postTagIds } } } },
+        include: { category: true },
+        orderBy: { publishedAt: 'desc' },
+        take: 3,
+      });
+    }
+    if (related.length < 3) {
+      const catRelated = await prisma.article.findMany({
+        where: { status: 'PUBLISHED', categoryId: post.categoryId, id: { not: post.id } },
+        include: { category: true },
+        orderBy: { publishedAt: 'desc' },
+        take: 3,
+      });
+      // fill remaining
+      const have = new Set(related.map((r: any) => r.id));
+      catRelated.forEach((r: any) => { if (!have.has(r.id) && related.length < 3) { related.push(r); have.add(r.id); } });
+    }
+  } catch (e) { console.error('related error:', e); }
 
-  // prev/next in same category
-  const [prevPost, nextPost] = await Promise.all([
-    prisma.article.findFirst({
-      where: { status: 'PUBLISHED', categoryId: post.categoryId, publishedAt: { lt: post.publishedAt || new Date() } },
-      orderBy: { publishedAt: 'desc' },
-      select: { title: true, slug: true, category: { select: { slug: true } } },
-    }),
-    prisma.article.findFirst({
-      where: { status: 'PUBLISHED', categoryId: post.categoryId, publishedAt: { gt: post.publishedAt || new Date() } },
-      orderBy: { publishedAt: 'asc' },
-      select: { title: true, slug: true, category: { select: { slug: true } } },
-    }),
-  ]);
+  // prev/next in same category (SEQUENTIAL - pooler connection_limit=1 ke saath safe)
+  const prevPost = await prisma.article.findFirst({
+    where: { status: 'PUBLISHED', categoryId: post.categoryId, publishedAt: { lt: post.publishedAt || new Date() } },
+    orderBy: { publishedAt: 'desc' },
+    select: { title: true, slug: true, category: { select: { slug: true } } },
+  });
+  const nextPost = await prisma.article.findFirst({
+    where: { status: 'PUBLISHED', categoryId: post.categoryId, publishedAt: { gt: post.publishedAt || new Date() } },
+    orderBy: { publishedAt: 'asc' },
+    select: { title: true, slug: true, category: { select: { slug: true } } },
+  });
 
   return (
     <>
@@ -120,21 +136,24 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
         <TableOfContents html={post.content} />
         <main className="posts-section">
           <div className="post-content-wrapper">
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-light)', marginBottom: 12 }}>
-              <a href="/" style={{ color: 'var(--primary)' }}>Home</a>
-              <span style={{ margin: '0 8px' }}>/</span>
+            <div className="breadcrumb">
+              <a href="/" style={{ color: 'var(--primary)' }}><i className="fas fa-home" style={{ marginRight: 5 }} />Home</a>
+              <span className="breadcrumb-sep">/</span>
               {post.category && (
                 <>
                   <a href={`/category/${catSlug}`} style={{ color: 'var(--primary)' }}>{post.category.name}</a>
-                  <span style={{ margin: '0 8px' }}>/</span>
+                  <span className="breadcrumb-sep">/</span>
                 </>
               )}
-              <span>{post.title.slice(0, 50)}...</span>
+              <span className="breadcrumb-current">{post.title.slice(0, 50)}...</span>
             </div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-dark)', lineHeight: 1.3, marginBottom: 20 }}>
+            <h1 className="article-title" style={{ fontSize: 'clamp(1.6rem, 3.5vw, 2.4rem)', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1.28, marginBottom: 20, letterSpacing: '-0.02em' }}>
               {post.title}
             </h1>
 
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <FontSizeAdjuster />
+            </div>
             <div className="post-meta" style={{ marginBottom: 25, paddingBottom: 20, borderBottom: '2px solid var(--border)', flexWrap: 'wrap' }}>
               <span><i className="fas fa-calendar-alt" /> {formatDate(post.publishedAt || post.createdAt)}</span>
               <span><i className="fas fa-user" /> {post.author?.name || 'Jatin Kumar'}</span>
@@ -187,6 +206,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
               <a className="share-btn share-telegram" style={{ background: '#229ED9', color: '#fff', width: 40, height: 40, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} href={`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(post.title)}`} target="_blank" rel="noopener"><i className="fab fa-telegram-plane" /></a>
             </div>
 
+            <CommentsSection articleId={post.id} />
+
             {related.length > 0 && (
               <div className="related-posts" style={{ marginTop: 30 }}>
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 20 }}>
@@ -207,11 +228,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
           </div>
         </main>
 
-        <Sidebar
-          categories={categories}
-          recent={recent.map((p) => ({ title: p.title, slug: p.slug, categorySlug: p.category?.slug || 'uncategorized', date: formatDate(p.publishedAt || p.createdAt) }))}
-          popular={popular.map((p) => ({ title: p.title, slug: p.slug, categorySlug: p.category?.slug || 'uncategorized', views: 0 }))}
-        />
+        <SidebarClient />
       </div>
     </>
   );

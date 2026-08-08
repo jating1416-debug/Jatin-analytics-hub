@@ -9,11 +9,22 @@ export default function CodeHighlighter() {
     const body = document.querySelector('.post-body.entry-content');
     if (!body) return;
 
-    // 1. Copy button har code block pe
+    // 1. Copy + theme toggle buttons har code block pe
     body.querySelectorAll('pre').forEach((pre) => {
       if (pre.getAttribute('data-copy-done')) return;
       pre.setAttribute('data-copy-done', '1');
       pre.style.position = 'relative';
+
+      // theme toggle (dark/light code)
+      const themeBtn = document.createElement('button');
+      themeBtn.textContent = '🌙';
+      themeBtn.title = 'Code theme (dark/light)';
+      themeBtn.style.cssText = 'position:absolute;top:8px;right:52px;background:rgba(255,255,255,0.12);color:#e2e8f0;border:1px solid rgba(255,255,255,0.2);padding:4px 9px;border-radius:6px;font-size:0.72rem;cursor:pointer;z-index:5;';
+      themeBtn.onclick = () => {
+        pre.classList.toggle('code-light');
+        themeBtn.textContent = pre.classList.contains('code-light') ? '☀️' : '🌙';
+      };
+      pre.appendChild(themeBtn);
 
       const btn = document.createElement('button');
       btn.textContent = '📋 Copy';

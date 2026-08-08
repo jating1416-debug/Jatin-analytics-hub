@@ -17,6 +17,21 @@ export default function Hero({
   const [wordIdx, setWordIdx] = useState(0);
   const [fade, setFade] = useState(true);
   const [counts, setCounts] = useState({ posts: 0, tools: 0, topics: 0 });
+  const [liveStats, setLiveStats] = useState<{ posts: number; topics: number } | null>(null);
+
+  // LIVE STATS - /api/sidebar se real numbers (server pe koi query nahi)
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/sidebar')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled && d && d.totalPosts) {
+          setLiveStats({ posts: d.totalPosts, topics: d.totalCategories || 7 });
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   // rotating word effect
   useEffect(() => {
@@ -30,19 +45,22 @@ export default function Hero({
     return () => clearInterval(t);
   }, []);
 
-  // animated counters (count-up on mount)
+  // animated counters (count-up) - live stats aane pe dobara animate
+  const finalStats = liveStats
+    ? { posts: liveStats.posts, tools: 12, topics: liveStats.topics }
+    : stats;
   useEffect(() => {
     const targets = [
-      { key: 'posts' as const, val: stats.posts },
-      { key: 'tools' as const, val: stats.tools },
-      { key: 'topics' as const, val: stats.topics },
+      { key: 'posts' as const, val: finalStats.posts },
+      { key: 'tools' as const, val: finalStats.tools },
+      { key: 'topics' as const, val: finalStats.topics },
     ];
-    const dur = 1200;
+    const dur = 1100;
     const start = performance.now();
     const step = (now: number) => {
       const p = Math.min(1, (now - start) / dur);
       const eased = 1 - Math.pow(1 - p, 3);
-      const next = { ...counts };
+      const next = { posts: 0, tools: 0, topics: 0 };
       targets.forEach((t) => {
         next[t.key] = Math.round(t.val * eased);
       });
@@ -50,8 +68,7 @@ export default function Hero({
       if (p < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [finalStats.posts, finalStats.tools, finalStats.topics]);
 
   return (
     <div className="featured-banner">

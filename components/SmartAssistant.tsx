@@ -33,9 +33,32 @@ const CHIPS = ['CALCULATE', 'YTD', 'window function', 'groupby', 'XLOOKUP', 'JOI
 export default function SmartAssistant() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [listening, setListening] = useState(false);
   const [messages, setMessages] = useState<{ user: boolean; text: string }[]>([
     { user: false, text: '👋 Hello! Main aapka Data Assistant hoon — DAX, SQL, Python, Excel, Power Query ke 20+ topics mein help kar sakta hoon. Koi bhi concept poochho ya neeche chips pe click karo!' },
   ]);
+
+  // VOICE INPUT - browser ki free speech-to-text (koi API cost nahi)
+  const startVoice = () => {
+    const w = window as any;
+    const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!SR) { alert('Aapka browser voice support nahi karta (Chrome try karo)'); return; }
+    try {
+      const rec = new SR();
+      rec.lang = 'en-IN';
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      setListening(true);
+      rec.onresult = (e: any) => {
+        const text = e.results?.[0]?.[0]?.transcript || '';
+        setInput(text);
+        if (text.trim()) ask(text);
+      };
+      rec.onend = () => setListening(false);
+      rec.onerror = () => setListening(false);
+      rec.start();
+    } catch { setListening(false); }
+  };
 
   const ask = (q: string) => {
     const query = q.trim();
@@ -139,6 +162,18 @@ export default function SmartAssistant() {
               placeholder="Ask: CALCULATE, window function, groupby..."
               style={{ flex: 1, padding: '9px 14px', border: '1px solid var(--border)', borderRadius: 20, background: 'var(--bg)', color: 'var(--text-dark)', outline: 'none', fontSize: '0.85rem' }}
             />
+            <button
+              onClick={startVoice}
+              title="Voice se pucho (free speech-to-text)"
+              style={{
+                width: 42, borderRadius: '50%', border: '1px solid var(--border)',
+                background: listening ? 'rgba(239,68,68,0.15)' : 'var(--card-bg)',
+                color: listening ? '#ef4444' : 'var(--text-dark)', cursor: 'pointer',
+                animation: listening ? 'pulseRed 1.2s infinite' : 'none',
+              }}
+            >
+              <i className="fas fa-microphone" />
+            </button>
             <button onClick={() => ask(input)} style={{ width: 42, borderRadius: '50%', background: 'var(--gradient)', color: '#fff', border: 'none', cursor: 'pointer' }}>
               <i className="fas fa-paper-plane" />
             </button>

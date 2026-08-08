@@ -158,3 +158,12 @@ model PageView {
   @@index([path])
   @@index([createdAt])
 }
+
+model SearchLog {
+  id        Int      @id @default(autoincrement())
+  term      String
+  createdAt DateTime @default(now())
+
+  @@index([term])
+  @@index([createdAt])
+}

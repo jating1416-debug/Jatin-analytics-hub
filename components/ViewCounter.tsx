@@ -19,10 +19,21 @@ export default function ViewCounter({ articleId }: { articleId: number }) {
 
       // count + timestamp save
       localStorage.setItem(key, String(now));
+
+      // sessionId (trend chart ke liye - admin analytics)
+      let sessionId = '';
+      try {
+        sessionId = localStorage.getItem('di_session') || '';
+        if (!sessionId) {
+          sessionId = 's_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+          localStorage.setItem('di_session', sessionId);
+        }
+      } catch {}
+
       fetch('/api/pageview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleId }),
+        body: JSON.stringify({ articleId, sessionId, path: window.location.pathname }),
         keepalive: true,
       }).catch(() => {
         // fail hone pe timestamp revert (taaki count miss na ho)
@@ -36,7 +47,7 @@ export default function ViewCounter({ articleId }: { articleId: number }) {
           fetch('/api/pageview', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ articleId }),
+            body: JSON.stringify({ articleId, path: window.location.pathname }),
             keepalive: true,
           }).catch(() => {});
         }

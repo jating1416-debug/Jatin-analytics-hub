@@ -14,15 +14,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const [categories, tags, articles] = await Promise.all([
-      prisma.category.findMany({ select: { slug: true } }),
-      prisma.tag.findMany({ select: { slug: true } }),
-      prisma.article.findMany({
-        where: { status: 'PUBLISHED' },
-        select: { slug: true, category: { select: { slug: true } }, updatedAt: true },
-        orderBy: { publishedAt: 'desc' },
-      }),
-    ]);
+    // SEQUENTIAL (pooler connection_limit=1 ke saath safe)
+    const categories = await prisma.category.findMany({ select: { slug: true } });
+    const tags = await prisma.tag.findMany({ select: { slug: true } });
+    const articles = await prisma.article.findMany({
+      where: { status: 'PUBLISHED' },
+      select: { slug: true, category: { select: { slug: true } }, updatedAt: true },
+      orderBy: { publishedAt: 'desc' },
+    });
 
     const categoryUrls: MetadataRoute.Sitemap = categories.map((c) => ({
       url: `${SITE_URL}/category/${c.slug}`,
