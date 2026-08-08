@@ -26,73 +26,71 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   let dbError = false;
   let counts: Record<string, number> = {};
 
+  // Har section alag try/catch mein - ek fail ho to baaki site chale
   try {
     categories = await prisma.category.findMany({
       orderBy: { name: 'asc' },
       include: { _count: { select: { articles: true } } },
     });
+  } catch (e) { console.error('categories error:', e); dbError = true; }
 
-    // counts: category-wise + error label
-    const countResults = await Promise.all([
-      ...COUNT_KEYS.filter((k) => k !== 'error').map((k) =>
-        prisma.article.count({ where: { status: 'PUBLISHED', category: { slug: k } } })
-      ),
-      prisma.article.count({ where: { status: 'PUBLISHED', content: { contains: 'error', mode: 'insensitive' } } }),
-      prisma.article.count({ where: { status: 'PUBLISHED' } }),
-    ]);
-    const catCounts = countResults.slice(0, COUNT_KEYS.length - 1);
-    const errorCount = countResults[COUNT_KEYS.length - 1];
-    const allCount = countResults[COUNT_KEYS.length];
+  // counts (SEQUENTIAL - pool pe pressure kam, timeout nahi hoga)
+  try {
+    const allCount = await prisma.article.count({ where: { status: 'PUBLISHED' } });
     counts = { all: allCount };
-    COUNT_KEYS.forEach((k, i) => {
-      if (k === 'error') counts[k] = errorCount;
-      else counts[k] = catCounts[i];
-    });
+    for (const k of COUNT_KEYS) {
+      if (k === 'error') {
+        counts[k] = await prisma.article.count({ where: { status: 'PUBLISHED', content: { contains: 'error', mode: 'insensitive' } } });
+      } else {
+        counts[k] = await prisma.article.count({ where: { status: 'PUBLISHED', category: { slug: k } } });
+      }
+    }
+  } catch (e) { console.error('counts error:', e); }
 
-    // articles with cat filter + error special
+  // articles (main content - iska fail hona bada issue hai)
+  try {
     const where: any = { status: 'PUBLISHED' };
     if (cat === 'error') {
       where.content = { contains: 'error', mode: 'insensitive' };
     } else if (cat !== 'all') {
       where.category = { slug: cat };
     }
+    // sequential: pehle count, phir fetch (pool timeout avoid)
+    total = await prisma.article.count({ where });
+    articles = await prisma.article.findMany({
+      where,
+      include: { category: true, author: { select: { name: true } } },
+      orderBy: { publishedAt: 'desc' },
+      skip: (page - 1) * POSTS_PER_PAGE,
+      take: POSTS_PER_PAGE,
+    });
+  } catch (e) { console.error('articles error:', e); dbError = true; }
 
-    [articles, total] = await Promise.all([
-      prisma.article.findMany({
-        where,
-        include: { category: true, author: { select: { name: true } } },
-        orderBy: { publishedAt: 'desc' },
-        skip: (page - 1) * POSTS_PER_PAGE,
-        take: POSTS_PER_PAGE,
-      }),
-      prisma.article.count({ where }),
-    ]);
-
+  // featured (optional)
+  try {
     featured = await prisma.article.findMany({
       where: { status: 'PUBLISHED', featured: true },
       include: { category: true },
       orderBy: { publishedAt: 'desc' },
       take: 4,
     });
+  } catch (e) { console.error('featured error:', e); }
 
-    [recent, popular] = await Promise.all([
-      prisma.article.findMany({
-        where: { status: 'PUBLISHED' },
-        include: { category: true },
-        orderBy: { publishedAt: 'desc' },
-        take: 5,
-      }),
-      prisma.article.findMany({
-        where: { status: 'PUBLISHED' },
-        include: { category: true },
-        orderBy: { viewCount: 'desc' },
-        take: 5,
-      }),
-    ]);
-  } catch (e) {
-    dbError = true;
-    console.error('DB error on homepage:', e);
-  }
+  // recent + popular (optional - sidebar)
+  try {
+    recent = await prisma.article.findMany({
+      where: { status: 'PUBLISHED' },
+      include: { category: true },
+      orderBy: { publishedAt: 'desc' },
+      take: 5,
+    });
+    popular = await prisma.article.findMany({
+      where: { status: 'PUBLISHED' },
+      include: { category: true },
+      orderBy: { viewCount: 'desc' },
+      take: 5,
+    });
+  } catch (e) { console.error('recent/popular error:', e); }
 
   const totalPages = Math.max(1, Math.ceil(total / POSTS_PER_PAGE));
 
