@@ -10,11 +10,12 @@ const FILTERS = [
   { key: 'power-bi', label: 'Power BI' },
   { key: 'excel', label: 'Excel' },
   { key: 'career', label: 'Career' },
-  { key: 'interview-questions', label: '🎯 Interview Q&A' },
-  { key: 'case-study', label: '📁 Case Study' },
+  { key: 'interview-questions', label: 'Interview Q&A' },
+  { key: 'case-study', label: 'Case Study' },
+  { key: 'error', label: 'error' },
 ];
 
-export default function CategoryFilter() {
+export default function CategoryFilter({ counts }: { counts?: Record<string, number> }) {
   const router = useRouter();
   const params = useSearchParams();
   const [active, setActive] = useState('all');
@@ -32,17 +33,37 @@ export default function CategoryFilter() {
 
   return (
     <div className="filter-tags-wrapper">
-      {FILTERS.map((f) => (
-        <button
-          key={f.key}
-          type="button"
-          className={`filter-tag-btn${active === f.key ? ' active' : ''}`}
-          data-filter={f.key}
-          onClick={() => onFilter(f.key)}
-        >
-          {f.label}
-        </button>
-      ))}
+      {FILTERS.map((f) => {
+        const count = counts ? counts[f.key] ?? 0 : 0;
+        const isActive = active === f.key;
+        return (
+          <button
+            key={f.key}
+            type="button"
+            className={`filter-tag-btn${isActive ? ' active' : ''}`}
+            data-filter={f.key}
+            onClick={() => onFilter(f.key)}
+          >
+            {f.label}
+            {counts !== undefined && (
+              <span
+                style={{
+                  display: 'inline-block',
+                  marginLeft: 6,
+                  background: isActive ? 'rgba(255,255,255,0.25)' : 'rgba(102,126,234,0.15)',
+                  color: isActive ? '#fff' : 'var(--primary)',
+                  borderRadius: 10,
+                  padding: '1px 7px',
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                }}
+              >
+                {count}
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

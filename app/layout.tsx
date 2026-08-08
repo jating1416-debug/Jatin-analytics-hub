@@ -2,6 +2,11 @@ import type { Metadata } from 'next';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ReadingProgress from '@/components/ReadingProgress';
+import SmartAssistant from '@/components/SmartAssistant';
+import ClientWidgets from '@/components/ClientWidgets';
+import CheatSheet from '@/components/CheatSheet';
+import CommandPalette from '@/components/CommandPalette';
+import MobileStickyBar from '@/components/MobileStickyBar';
 import { SITE_NAME, SITE_DESC, SITE_URL } from '@/lib/utils';
 import './globals.css';
 
@@ -47,6 +52,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Navbar />
         {children}
         <Footer />
+        <SmartAssistant />
+        <ClientWidgets />
+        <CheatSheet />
+        <CommandPalette />
+        <MobileStickyBar />
       </body>
     </html>
   );

@@ -9,18 +9,22 @@ import type { ArticleWithCategory } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
+// counts ke liye: har category + error label
+const COUNT_KEYS = ['sql', 'python', 'power-bi', 'excel', 'career', 'interview-questions', 'case-study', 'error'];
+
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ page?: string; cat?: string }> }) {
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.page || '1', 10) || 1);
   const cat = sp.cat || 'all';
 
-  // DB error hone pe bhi page 500 nahi dega - friendly message dikhega
   let categories: { name: string; slug: string; _count: { articles: number } }[] = [];
   let articles: ArticleWithCategory[] = [];
   let recent: ArticleWithCategory[] = [];
   let popular: ArticleWithCategory[] = [];
+  let featured: ArticleWithCategory[] = [];
   let total = 0;
   let dbError = false;
+  let counts: Record<string, number> = {};
 
   try {
     categories = await prisma.category.findMany({
@@ -28,10 +32,30 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       include: { _count: { select: { articles: true } } },
     });
 
-    const where = {
-      status: 'PUBLISHED' as const,
-      ...(cat !== 'all' ? { category: { slug: cat } } : {}),
-    };
+    // counts: category-wise + error label
+    const countResults = await Promise.all([
+      ...COUNT_KEYS.filter((k) => k !== 'error').map((k) =>
+        prisma.article.count({ where: { status: 'PUBLISHED', category: { slug: k } } })
+      ),
+      prisma.article.count({ where: { status: 'PUBLISHED', content: { contains: 'error', mode: 'insensitive' } } }),
+      prisma.article.count({ where: { status: 'PUBLISHED' } }),
+    ]);
+    const catCounts = countResults.slice(0, COUNT_KEYS.length - 1);
+    const errorCount = countResults[COUNT_KEYS.length - 1];
+    const allCount = countResults[COUNT_KEYS.length];
+    counts = { all: allCount };
+    COUNT_KEYS.forEach((k, i) => {
+      if (k === 'error') counts[k] = errorCount;
+      else counts[k] = catCounts[i];
+    });
+
+    // articles with cat filter + error special
+    const where: any = { status: 'PUBLISHED' };
+    if (cat === 'error') {
+      where.content = { contains: 'error', mode: 'insensitive' };
+    } else if (cat !== 'all') {
+      where.category = { slug: cat };
+    }
 
     [articles, total] = await Promise.all([
       prisma.article.findMany({
@@ -43,6 +67,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       }),
       prisma.article.count({ where }),
     ]);
+
+    featured = await prisma.article.findMany({
+      where: { status: 'PUBLISHED', featured: true },
+      include: { category: true },
+      orderBy: { publishedAt: 'desc' },
+      take: 4,
+    });
 
     [recent, popular] = await Promise.all([
       prisma.article.findMany({
@@ -70,13 +101,27 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <Hero />
       <div className="layout-wrapper">
         <main className="posts-section">
+          {featured.length > 0 && (
+            <div className="sidebar-widget" style={{ marginBottom: 24, padding: '18px 22px' }}>
+              <div className="widget-title" style={{ marginBottom: 12 }}><i className="fas fa-star" /> ⭐ Featured Articles</div>
+              <div className="related-posts-grid">
+                {featured.map((f) => (
+                  <a key={f.id} href={`/${f.category?.slug || 'post'}/${f.slug}`} className="related-post-card" style={{ textDecoration: 'none' }}>
+                    <div className="related-post-card-body">
+                      <h4>{f.title}</h4>
+                      <div className="related-post-card-meta" style={{ color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 700 }}><i className="fas fa-arrow-right" /> Read</div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
           <h2 className="section-title">📝 Latest Articles</h2>
-          <CategoryFilter />
+          <CategoryFilter counts={counts} />
 
           {dbError ? (
             <div className="category-empty" style={{ display: 'block' }}>
               <p>⚠️ Database se connect nahi ho paya — thodi der baad refresh karo.</p>
-              <p style={{ fontSize: '0.8rem' }}>(Supabase project running hai? Database URL sahi hai? — Vercel env vars check karo)</p>
             </div>
           ) : articles.length === 0 ? (
             <div className="category-empty" style={{ display: 'block' }}>

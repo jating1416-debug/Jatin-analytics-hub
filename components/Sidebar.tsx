@@ -1,5 +1,23 @@
 import Link from 'next/link';
 
+const TOOLS = [
+  { slug: 'kpi-calculator', icon: '📊', name: 'KPI Calculator' },
+  { slug: 'cagr-calculator', icon: '📈', name: 'CAGR Calculator' },
+  { slug: 'growth-percent', icon: '📉', name: 'Growth %' },
+  { slug: 'profit-margin', icon: '💰', name: 'Profit Margin' },
+  { slug: 'json-formatter', icon: '🔧', name: 'JSON Formatter' },
+  { slug: 'csv-viewer', icon: '📄', name: 'CSV Viewer' },
+  { slug: 'csv-to-json', icon: '🔄', name: 'CSV → JSON' },
+  { slug: 'sql-formatter', icon: '🗄️', name: 'SQL Formatter' },
+  { slug: 'regex-tester', icon: '🔍', name: 'Regex Tester' },
+  { slug: 'ats-scanner', icon: '📄', name: 'ATS Scanner' },
+  { slug: 'sql-playground', icon: '🧠', name: 'SQL Playground' },
+  { slug: 'dax-explorer', icon: '📊', name: 'DAX Explorer' },
+];
+
+import XPStreak from '@/components/XPStreak';
+import NewsletterWidget from '@/components/NewsletterWidget';
+
 export default function Sidebar({
   categories,
   recent,
@@ -11,6 +29,26 @@ export default function Sidebar({
 }) {
   return (
     <aside className="sidebar">
+      <XPStreak />
+      <NewsletterWidget />
+
+      {/* 📣 TELEGRAM CHANNEL */}
+      <div className="sidebar-widget">
+        <div className="widget-title"><i className="fab fa-telegram-plane" /> Telegram Channel</div>
+        <p style={{ fontSize: '0.82rem', color: 'var(--text-light)', marginBottom: 12, lineHeight: 1.5 }}>
+          Daily data analytics tips, code snippets aur naye posts ke links — join karo!
+        </p>
+        <a
+          className="cta-btn-white"
+          href="https://t.me/+o5aSSYK-6Xk1ZjFl"
+          target="_blank"
+          rel="noopener"
+          style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}
+        >
+          <i className="fab fa-telegram-plane" /> Join Channel
+        </a>
+      </div>
+
       <div className="sidebar-widget about-widget">
         <div className="about-avatar">👤</div>
         <div className="about-name">Jatin Kumar</div>
@@ -27,6 +65,20 @@ export default function Sidebar({
           <a className="social-link social-kaggle" href="https://kaggle.com/jatinkhandelwal112" target="_blank" rel="noopener"><i className="fab fa-kaggle" /> Kaggle</a>
           <a className="social-link social-email" href="mailto:jating1416@gmail.com"><i className="fas fa-envelope" /> Email</a>
         </div>
+      </div>
+
+      {/* 🛠️ TOOLS WIDGET - sidebar mein (footer se yahan shift) */}
+      <div className="sidebar-widget">
+        <div className="widget-title"><i className="fas fa-tools" /> All Tools</div>
+        <ul className="hub-list" style={{ maxHeight: 280, overflowY: 'auto' }}>
+          {TOOLS.map((t) => (
+            <li key={t.slug}>
+              <Link href={`/tools/${t.slug}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>{t.icon}</span> {t.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div className="sidebar-widget">
@@ -65,7 +117,7 @@ export default function Sidebar({
             <li className="recent-post-item" key={p.slug}>
               <div className="recent-post-info">
                 <Link href={`/${p.categorySlug}/${p.slug}`}>{p.title}</Link>
-                <div className="recent-post-date"><i className="fas fa-eye" /> {p.views} views</div>
+                <div className="recent-post-date"><i className="fas fa-eye" /> {p.views} reads</div>
               </div>
             </li>
           ))}

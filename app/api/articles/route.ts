@@ -3,78 +3,92 @@ import { isAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { slugify, readingTime, excerptFrom } from '@/lib/utils';
 
-// GET /api/articles?status=PUBLISHED&category=sql&q=search  (admin list)
-export async function GET(req: NextRequest) {
+// GET /api/articles/:id
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!(await isAdmin())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const sp = req.nextUrl.searchParams;
-  const status = sp.get('status') || undefined;
-  const category = sp.get('category') || undefined;
-  const q = sp.get('q') || '';
-
-  const where: any = {};
-  if (status) where.status = status;
-  if (category) where.category = { slug: category };
-  if (q) {
-    where.OR = [
-      { title: { contains: q, mode: 'insensitive' } },
-      { slug: { contains: q, mode: 'insensitive' } },
-    ];
-  }
-
-  const articles = await prisma.article.findMany({
-    where,
-    include: { category: true },
-    orderBy: { updatedAt: 'desc' },
-    take: 200,
+  const { id } = await params;
+  const article = await prisma.article.findUnique({
+    where: { id: Number(id) },
+    include: { category: true, tags: { include: { tag: true } } },
   });
-  return NextResponse.json(articles);
+  if (!article) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  return NextResponse.json(article);
 }
 
-// POST /api/articles  { title, content, categoryId, status, excerpt?, coverImage? }
-export async function POST(req: NextRequest) {
+// PUT /api/articles/:id  { title, content, categoryId, status, tags?, featured?, ... }
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!(await isAdmin())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
+    const { id } = await params;
     const body = await req.json();
-    const title = String(body.title || '').trim();
-    const content = String(body.content || '').trim();
-    const categoryId = Number(body.categoryId);
-    if (!title || !content || !categoryId) {
-      return NextResponse.json({ error: 'Title, content aur category zaroori hai' }, { status: 400 });
+    const articleId = Number(id);
+
+    const existing = await prisma.article.findUnique({ where: { id: articleId } });
+    if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    const title = String(body.title ?? existing.title).trim();
+    const content = String(body.content ?? existing.content).trim();
+    const categoryId = body.categoryId ? Number(body.categoryId) : existing.categoryId;
+
+    let slug = existing.slug;
+    const newSlug = body.slug ? String(body.slug).trim() : slugify(title);
+    if (newSlug !== slug) {
+      const dup = await prisma.article.findFirst({ where: { slug: newSlug, id: { not: articleId } } });
+      if (!dup) slug = newSlug;
     }
 
-    let slug = slugify(title);
-    // unique slug banao agar duplicate ho
-    let exists = await prisma.article.findUnique({ where: { slug } });
-    let i = 1;
-    while (exists) {
-      slug = slugify(title) + '-' + i;
-      exists = await prisma.article.findUnique({ where: { slug } });
-      i++;
+    const wasPublished = existing.status === 'PUBLISHED';
+    const newStatus = body.status || existing.status;
+    const publishNow = !wasPublished && newStatus === 'PUBLISHED';
+
+    // tags update
+    let tagConnects: { tagId: number }[] | undefined;
+    if (Array.isArray(body.tags)) {
+      const tagNames = body.tags.map(String).filter(Boolean).slice(0, 10);
+      tagConnects = await Promise.all(
+        tagNames.map(async (name) => {
+          const tagSlug = slugify(name) || 'tag';
+          const tag = await prisma.tag.upsert({
+            where: { slug: tagSlug },
+            update: {},
+            create: { name: name.slice(0, 60), slug: tagSlug },
+          });
+          return { tagId: tag.id };
+        })
+      );
+      // delete old links
+      await prisma.articleTag.deleteMany({ where: { articleId } });
     }
 
-    const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
-    if (!admin) return NextResponse.json({ error: 'Admin user nahi mila' }, { status: 500 });
-
-    const article = await prisma.article.create({
+    const article = await prisma.article.update({
+      where: { id: articleId },
       data: {
         title: title.slice(0, 300),
         slug,
-        excerpt: body.excerpt || excerptFrom(content, 220),
+        excerpt: body.excerpt !== undefined ? body.excerpt : excerptFrom(content, 220),
         content,
-        contentType: body.contentType || 'TUTORIAL',
-        difficulty: body.difficulty || 'BEGINNER',
-        coverImage: body.coverImage || null,
-        ogImage: body.ogImage || null,
+        contentType: body.contentType || existing.contentType,
+        difficulty: body.difficulty || existing.difficulty,
+        coverImage: body.coverImage !== undefined ? body.coverImage : existing.coverImage,
+        ogImage: body.ogImage !== undefined ? body.ogImage : existing.ogImage,
         readingTime: readingTime(content),
         categoryId,
-        authorId: admin.id,
-        status: body.status === 'DRAFT' ? 'DRAFT' : 'PUBLISHED',
-        publishedAt: body.status === 'DRAFT' ? null : new Date(),
+        status: newStatus,
+        featured: body.featured !== undefined ? !!body.featured : existing.featured,
+        ...(tagConnects ? { tags: { create: tagConnects } } : {}),
+        ...(publishNow ? { publishedAt: new Date() } : {}),
       },
     });
-    return NextResponse.json(article, { status: 201 });
+    return NextResponse.json(article);
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Error' }, { status: 500 });
   }
+}
+
+// DELETE /api/articles/:id
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await isAdmin())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { id } = await params;
+  await prisma.article.delete({ where: { id: Number(id) } });
+  return NextResponse.json({ ok: true });
 }

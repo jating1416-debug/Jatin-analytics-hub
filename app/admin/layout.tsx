@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await isAdmin();
-  if (!admin) redirect('/login'); // login page ab /admin ke BAHAR hai (loop fix)
+  if (!admin) redirect('/login');
 
   return (
     <div className="layout-wrapper">
@@ -17,6 +17,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <li><Link href="/admin"><i className="fas fa-chart-line" /> Dashboard</Link></li>
             <li><Link href="/admin/articles"><i className="fas fa-file-alt" /> All Articles</Link></li>
             <li><Link href="/admin/articles/new"><i className="fas fa-plus-circle" /> New Article</Link></li>
+            <li><Link href="/admin/categories"><i className="fas fa-layer-group" /> Categories</Link></li>
+            <li><Link href="/admin/analytics"><i className="fas fa-eye" /> Analytics (Views)</Link></li>
             <li><Link href="/"><i className="fas fa-globe" /> View Site</Link></li>
             <li>
               <button

@@ -6,7 +6,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function EditArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const article = await prisma.article.findUnique({ where: { id: Number(id) } });
+  const article = await prisma.article.findUnique({
+    where: { id: Number(id) },
+    include: { tags: { include: { tag: true } } },
+  });
   if (!article) notFound();
 
   const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
@@ -26,6 +29,8 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
           status: article.status,
           coverImage: article.coverImage || '',
           metaDescription: article.metaDescription || '',
+          tags: article.tags.map((t) => t.tag.name),
+          featured: article.featured,
         }}
       />
     </>

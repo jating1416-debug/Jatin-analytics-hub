@@ -3,6 +3,9 @@ import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import TableOfContents from '@/components/TableOfContents';
 import Sidebar from '@/components/Sidebar';
+import ViewCounter from '@/components/ViewCounter';
+import PostProcessor from '@/components/PostProcessor';
+import SchemaMarkup from '@/components/SchemaMarkup';
 import { SITE_URL, formatDate, excerptFrom } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -50,6 +53,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
           <div className="category-empty" style={{ display: 'block' }}>
             <p>⚠️ Database se connect nahi ho paya — thodi der baad refresh karo.</p>
           </div>
+          <ViewCounter articleId={post.id} />
+          <PostProcessor html={post.content} />
         </main>
       </div>
     );
@@ -100,10 +105,32 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
 
   return (
     <>
+      <SchemaMarkup
+        title={post.title}
+        url={url}
+        description={post.metaDescription || post.excerpt}
+        image={post.coverImage || post.ogImage}
+        publishedAt={post.publishedAt}
+        updatedAt={post.updatedAt}
+        categoryName={post.category?.name}
+        categoryUrl={post.category ? `${SITE_URL}/category/${post.category.slug}` : undefined}
+        authorName={post.author?.name || 'Jatin Kumar'}
+      />
       <TableOfContents html={post.content} />
       <div className="layout-wrapper">
         <main className="posts-section">
           <div className="post-content-wrapper">
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-light)', marginBottom: 12 }}>
+              <a href="/" style={{ color: 'var(--primary)' }}>Home</a>
+              <span style={{ margin: '0 8px' }}>/</span>
+              {post.category && (
+                <>
+                  <a href={`/category/${catSlug}`} style={{ color: 'var(--primary)' }}>{post.category.name}</a>
+                  <span style={{ margin: '0 8px' }}>/</span>
+                </>
+              )}
+              <span>{post.title.slice(0, 50)}...</span>
+            </div>
             <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-dark)', lineHeight: 1.3, marginBottom: 20 }}>
               {post.title}
             </h1>
@@ -112,7 +139,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
               <span><i className="fas fa-calendar-alt" /> {formatDate(post.publishedAt || post.createdAt)}</span>
               <span><i className="fas fa-user" /> {post.author?.name || 'Jatin Kumar'}</span>
               <span><i className="fas fa-clock" /> {post.readingTime || 3} min read</span>
-              <span><i className="fas fa-eye" /> {post.viewCount} views</span>
               {post.category && (
                 <span>
                   <i className="fas fa-folder" /> <a href={`/category/${catSlug}`} className="post-tag" style={{ display: 'inline', margin: '0 4px' }}>{post.category.name}</a>
@@ -184,7 +210,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
         <Sidebar
           categories={categories}
           recent={recent.map((p) => ({ title: p.title, slug: p.slug, categorySlug: p.category?.slug || 'uncategorized', date: formatDate(p.publishedAt || p.createdAt) }))}
-          popular={popular.map((p) => ({ title: p.title, slug: p.slug, categorySlug: p.category?.slug || 'uncategorized', views: p.viewCount }))}
+          popular={popular.map((p) => ({ title: p.title, slug: p.slug, categorySlug: p.category?.slug || 'uncategorized', views: 0 }))}
         />
       </div>
     </>
