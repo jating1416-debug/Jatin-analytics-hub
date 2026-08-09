@@ -12,7 +12,6 @@ const NAV_ITEMS = [
   { href: '/category/python', label: '🐍 Python' },
   { href: '/category/power-bi', label: '📈 Power BI' },
   { href: '/category/excel', label: '📗 Excel' },
-  { href: '/category/misc', label: '📚 Data Analytics' },
   { href: '/category/career', label: '💼 Career' },
   { href: '/category/interview-questions', label: '🎯 Interview Q&A' },
   { href: '/category/case-study', label: '📁 Case Study' },

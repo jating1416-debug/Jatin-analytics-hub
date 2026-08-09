@@ -155,7 +155,13 @@ export default function ArticleEditor({
       });
       const data = await res.json();
       if (res.ok) {
-        setMsg({ type: 'ok', text: target === 'PUBLISHED' ? '✅ Published! Article live hai.' : '💾 Draft saved.' });
+        const catName = categories.find((c) => c.id === categoryId)?.name || '';
+        setMsg({
+          type: 'ok',
+          text: target === 'PUBLISHED'
+            ? `✅ Published! Category: ${catName}`
+            : `💾 Draft saved. Category: ${catName}`,
+        });
         if (!articleId && data.id) {
           router.push(`/admin/articles/${data.id}/edit`);
           router.refresh();

@@ -12,7 +12,6 @@ const FILTERS = [
   { key: 'python', label: 'Python' },
   { key: 'power-bi', label: 'Power BI' },
   { key: 'excel', label: 'Excel' },
-  { key: 'misc', label: 'Data Analytics' },
   { key: 'career', label: 'Career' },
   { key: 'interview-questions', label: 'Interview Q&A' },
   { key: 'case-study', label: 'Case Study' },
@@ -146,6 +145,13 @@ export default function PostList() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  // PAGINATION - Older/Newer (scroll up + state set)
+  const goToPage = (p: number) => {
+    setPage(p);
+    const el = document.getElementById('post-list-anchor');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
     <div id="post-list-anchor">
       <div className="filter-tags-wrapper">
@@ -251,20 +257,26 @@ export default function PostList() {
           ))}
 
           {totalPages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 10, margin: '30px 0', flexWrap: 'wrap' }}>
-              {safePage > 1 && (
-                <button onClick={() => setPage(safePage - 1)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dark)', padding: '10px 20px', borderRadius: 20, cursor: 'pointer', fontWeight: 600 }}>
-                  <i className="fas fa-arrow-left" /> Newer
-                </button>
-              )}
-              <span style={{ alignSelf: 'center', fontSize: '0.85rem', color: 'var(--text-light)', fontWeight: 600 }}>
-                Page {safePage} / {totalPages} ({filtered.length} posts)
+            <div className="pg-nav" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, margin: '30px 0', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="pg-nav-btn"
+                onClick={() => goToPage(safePage - 1)}
+                disabled={safePage <= 1}
+              >
+                <i className="fas fa-arrow-left" /> Newer
+              </button>
+              <span className="pg-nav-info">
+                Page {safePage} / {totalPages} · {filtered.length} posts
               </span>
-              {safePage < totalPages && (
-                <button onClick={() => setPage(safePage + 1)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dark)', padding: '10px 20px', borderRadius: 20, cursor: 'pointer', fontWeight: 600 }}>
-                  Older <i className="fas fa-arrow-right" />
-                </button>
-              )}
+              <button
+                type="button"
+                className="pg-nav-btn"
+                onClick={() => goToPage(safePage + 1)}
+                disabled={safePage >= totalPages}
+              >
+                Older <i className="fas fa-arrow-right" />
+              </button>
             </div>
           )}
         </div>

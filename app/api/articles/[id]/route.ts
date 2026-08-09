@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { slugify, readingTime, excerptFrom } from '@/lib/utils';
+import { revalidatePath } from 'next/cache';
 
 // GET /api/articles/:id
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -79,6 +80,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         ...(publishNow ? { publishedAt: new Date() } : {}),
       },
     });
+    // ISR cache turant clear (category/status change turant dikhe)
+    try { revalidatePath('/', 'layout'); } catch (e) { console.error('revalidate:', e); }
     return NextResponse.json(article);
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Error' }, { status: 500 });

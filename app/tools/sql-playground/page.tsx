@@ -91,37 +91,55 @@ export default function SqlPlayground() {
     } catch {}
   }, []);
 
-  // engine load (jsdelivr primary, cdnjs fallback)
+  // SCRIPT-TAG LOADER (dynamic import se zyada reliable - CORS safe)
+  const loadScript = (src: string): Promise<any> =>
+    new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => {
+        // @ts-ignore
+        resolve(window.initSqlJs);
+      };
+      s.onerror = () => reject(new Error('Script load fail: ' + src));
+      document.head.appendChild(s);
+    });
+
+  // engine load (jsdelivr primary, cdnjs fallback) + retry
+  const loadEngine = async () => {
+    setLoading(true);
+    setError('');
+    for (const base of ENGINE_SOURCES) {
+      try {
+        const initSqlJs = await loadScript(base + 'sql-wasm.js');
+        const SQL = await initSqlJs({ locateFile: (f: string) => base + f });
+        const database = new SQL.Database();
+        SETUP.forEach((q) => database.run(q));
+        setDb(database);
+        setEngineSrc(base.includes('jsdelivr') ? 'jsdelivr' : 'cdnjs');
+        setLoading(false);
+        // draft se aayi query auto-run
+        try {
+          const draft = localStorage.getItem('di_sql_draft_auto');
+          if (draft) {
+            localStorage.removeItem('di_sql_draft_auto');
+            runQuery(draft, database);
+          }
+        } catch {}
+        return;
+      } catch (e: any) {
+        console.error('engine source fail:', base, e);
+      }
+    }
+    setError('SQL engine load fail — internet check karo ya Retry dabao.');
+    setLoading(false);
+  };
+
   useEffect(() => {
     let mounted = true;
-    async function load() {
-      for (const base of ENGINE_SOURCES) {
-        try {
-          // @ts-ignore
-          const initSqlJs = (await import(/* webpackIgnore: true */ base + 'sql-wasm.js')).default;
-          const SQL = await initSqlJs({ locateFile: (f: string) => base + f });
-          const database = new SQL.Database();
-          SETUP.forEach((q) => database.run(q));
-          if (!mounted) return;
-          setDb(database);
-          setEngineSrc(base.includes('jsdelivr') ? 'jsdelivr' : 'cdnjs');
-          setLoading(false);
-          // draft se aayi query auto-run
-          try {
-            const draft = localStorage.getItem('di_sql_draft_auto');
-            if (draft) {
-              localStorage.removeItem('di_sql_draft_auto');
-              runQuery(draft, database);
-            }
-          } catch {}
-          return;
-        } catch (e: any) {
-          console.error('engine source fail:', base, e);
-        }
-      }
-      if (mounted) { setError('SQL engine load fail — internet check karo ya thodi der baad try karo.'); setLoading(false); }
-    }
-    load();
+    (async () => {
+      await loadEngine();
+      if (!mounted) return;
+    })();
     return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -196,6 +214,11 @@ export default function SqlPlayground() {
             <button className="pg-btn" onClick={resetDb}>🔄 Reset Data</button>
             {loading && <span className="pg-status">⏳ Engine load ho raha hai...</span>}
             {!loading && engineSrc && <span className="pg-status">✅ Engine ready ({engineSrc})</span>}
+            {error && !loading && (
+              <button className="pg-btn" onClick={() => { setError(''); loadEngine(); }}>
+                🔄 Retry Engine
+              </button>
+            )}
           </div>
 
           {/* SAMPLES */}

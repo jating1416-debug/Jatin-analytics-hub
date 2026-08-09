@@ -4917,3 +4917,110 @@
   }
   .pg-schema-card b { font-size: 0.82rem; color: var(--primary); display: block; margin-bottom: 5px; font-family: var(--font-head); }
   .pg-schema-card code { font-size: 0.72rem; color: var(--text-light); font-family: 'Fira Code', monospace; }
+
+  /* ============================================================
+     ISSUES FIX — ATS upload, pagination nav, tools strip z-index
+  ============================================================ */
+
+  /* ---------- ATS FILE UPLOAD ---------- */
+  .ats-upload { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .ats-upload-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--gradient); color: #fff; border: none;
+    padding: 12px 22px; border-radius: 24px;
+    font-size: 0.88rem; font-weight: 700; cursor: pointer;
+    box-shadow: 0 10px 24px -8px rgba(79,70,229,0.55);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    font-family: inherit;
+  }
+  .ats-upload-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 14px 30px -8px rgba(79,70,229,0.65); }
+  .ats-upload-btn:disabled { opacity: 0.7; cursor: wait; }
+  .ats-file-name { font-size: 0.8rem; font-weight: 700; color: var(--text-dark); }
+  .ats-file-error {
+    width: 100%;
+    font-size: 0.8rem; font-weight: 600;
+    color: #ef4444; background: rgba(239,68,68,0.10);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 10px; padding: 9px 14px;
+  }
+
+  /* ---------- PAGINATION NAV (Older/Newer) ---------- */
+  .pg-nav { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 30px 0; flex-wrap: wrap; }
+  .pg-nav-btn {
+    background: var(--card-bg); border: 1.5px solid var(--border);
+    color: var(--text-dark); padding: 10px 22px; border-radius: 24px;
+    font-size: 0.85rem; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: all 0.22s ease; box-shadow: var(--shadow); font-family: inherit;
+  }
+  .pg-nav-btn:hover:not(:disabled) {
+    border-color: var(--primary); color: var(--primary);
+    transform: translateY(-2px); box-shadow: var(--shadow-hover);
+  }
+  .pg-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .pg-nav-info {
+    font-size: 0.85rem; color: var(--text-light); font-weight: 700;
+    background: var(--gradient-soft); padding: 7px 16px; border-radius: 20px;
+  }
+
+  /* ---------- TOOLS STRIP / TILES: click safety (koi overlay na ho) ---------- */
+  .tools-strip, .category-tiles-wrap, .hot-picks { position: relative; z-index: 8; }
+  .tool-strip-chip { cursor: pointer; }
+  .category-tile { cursor: pointer; }
+
+  /* ============================================================
+     PAGESPEED FIXES - LCP + CLS (Google PageSpeed report)
+     - LCP 11.67s: category tiles ab STATIC render (server HTML) -
+       turant dikhti hain, koi client-fetch wait nahi
+     - CLS 0.19: fixed heights + tabular numbers + skeleton cards
+       taaki content load hote waqt na khisake
+  ============================================================ */
+
+  /* --- LCP: category tile icon ab pehle HTML mein hi hai --- */
+  .category-tile-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px; height: 44px;
+    font-size: 1.6rem;
+    line-height: 1;
+  }
+
+  /* --- CLS: fixed heights (content reserve) --- */
+  .category-tile { min-height: 118px; justify-content: center; }
+  .category-tile-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 24px; min-width: 52px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .category-tile-name { min-height: 20px; display: inline-flex; align-items: center; }
+
+  .hero-stat { min-height: 104px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .hero-stat-value {
+    font-variant-numeric: tabular-nums;  /* count-up mein width na bade */
+    min-height: 32px; display: flex; align-items: center;
+  }
+  .hero-stat-label { min-height: 18px; }
+
+  .hot-picks { min-height: 40px; }
+  .hot-pick-card { min-height: 212px; }
+  .hot-pick-card .skel { margin-bottom: 10px; }
+
+  .section-title { min-height: 42px; }
+
+  /* article images: CLS kam karne ke liye aspect box reserve */
+  .post-content-wrapper img {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    height: auto;
+    background: var(--bg);
+  }
+  /* cover image bhi same */
+  .post-content-wrapper > img {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+  /* table/code blocks ke liye minimum height reserve nahi (unme CLS nahi) */
+
+  /* preload hint: category tiles ab static hain - koi extra wait nahi */

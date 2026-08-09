@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
 import { slugify, readingTime, excerptFrom } from '@/lib/utils';
 
 // GET /api/articles?status=PUBLISHED&category=sql&q=search  (admin list)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
 
 // PUT /api/categories/:id  (rename / update) - SIRF dynamic route mein kaam karta hai!
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -20,6 +21,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         ...(body.color !== undefined ? { color: body.color } : {}),
       },
     });
+    try { revalidatePath('/', 'layout'); } catch (e) { console.error('revalidate:', e); }
     return NextResponse.json(cat);
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Error' }, { status: 500 });
