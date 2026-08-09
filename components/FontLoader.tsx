@@ -2,14 +2,16 @@
 
 import { useEffect } from 'react';
 
-// FONT LOADER v3 - MOBILE LCP FIX
-// Problem: Slow 4G pe FA (254KB) + Google Fonts (195KB) = 470KB network busy
-//   -> hero text 3.8s tak paint nahi hota (LCP 5.6s, FCP 5.4s)
-// Fix: Fonts DELAYED inject:
-//   - Google Fonts: 1.2s baad (text pehle system font se render -> LCP turant)
-//   - Font Awesome: 2.5s baad (icons thodi der baad aate hain - content text hai)
-//   - window 'load' fallback: agar page pehle load ho jaye to bhi fonts aayenge
-// Display=swap -> text kabhi invisible nahi hota.
+// FONT LOADER v4 - MOBILE LCP FINAL FIX
+// Problem: Slow 4G pe FA (254KB) + Google Fonts (195KB) = 470KB third-party
+//   -> network busy, hero text 3.8s tak paint nahi (LCP 5.6s, FCP 5.4s)
+// Fix (aggressive delay):
+//   - Google Fonts: 1.5s baad (text pehle system font se turant render)
+//   - Font Awesome: 3.0s baad (sabse badi 254KB - icons decorative, baad mein)
+//   - display=swap -> text kabhi invisible nahi
+//   - 'load' fallback: page pehle load ho jaye to bhi fonts aayenge
+// NOTE: ye version hamesha SABSE LAST deploy karna - koi purana zip isko
+// overwrite na kare (warna mobile LCP wapas 5.6s ho jayega)
 
 const FONTS_URL = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sora:wght@700;800&family=Fira+Code:wght@400&display=swap';
 const FA_URL = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
@@ -37,12 +39,12 @@ export default function FontLoader() {
       document.head.appendChild(style);
     };
 
-    // Google Fonts - 1.2s delay (text pehle fallback se)
-    const t1 = setTimeout(() => { inject(FONTS_URL, 'font-gfonts'); }, 1200);
-    // Font Awesome - 2.5s delay (icons non-critical)
-    const t2 = setTimeout(() => { inject(FA_URL, 'font-fa'); injectSwap(); }, 2500);
+    // Google Fonts - 1.5s delay (text pehle fallback se render -> LCP fast)
+    const t1 = setTimeout(() => { inject(FONTS_URL, 'font-gfonts'); }, 1500);
+    // Font Awesome - 3s delay (sabse bada 254KB - icons non-critical)
+    const t2 = setTimeout(() => { inject(FA_URL, 'font-fa'); injectSwap(); }, 3000);
 
-    // fallback: page load complete ho jaye to bhi inject karo
+    // fallback: page load complete ho jaye to bhi inject
     const onLoad = () => {
       inject(FONTS_URL, 'font-gfonts');
       inject(FA_URL, 'font-fa');
