@@ -63,11 +63,12 @@ function isNewPost(d: string | null): boolean {
   } catch { return false; }
 }
 
-export default function PostList() {
-  const [allPosts, setAllPosts] = useState<Post[]>([]);
+export default function PostList({ initialPosts }: { initialPosts?: Post[] }) {
+  // SERVER-SIDE initial posts (home page HTML mein hi) - koi API wait nahi
+  const [allPosts, setAllPosts] = useState<Post[]>(initialPosts || []);
   const [cat, setCat] = useState('all');
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialPosts);
   const [error, setError] = useState('');
 
   // URL ?cat= param read karo (nav tabs: /?cat=sql, /?cat=python ...)
@@ -89,8 +90,10 @@ export default function PostList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // EK BAAR fetch - saari posts summaries
+  // EK BAAR fetch - saari posts summaries (sirf jab server data NAHI mila)
+  // Home page pe initialPosts HTML mein aate hain -> fetch skip (fast!)
   useEffect(() => {
+    if (initialPosts) return; // server data already hai
     let cancelled = false;
     fetch('/api/posts?all=1')
       .then((r) => r.json())
@@ -98,6 +101,7 @@ export default function PostList() {
       .catch(() => { if (!cancelled) setError('Load fail'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ---------- LOCAL FILTER (instant!) ----------

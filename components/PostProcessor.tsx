@@ -10,6 +10,14 @@ export default function PostProcessor({ html }: { html: string }) {
     const body = document.querySelector('.post-body.entry-content');
     if (!body) return;
 
+    // ---------- HEADING ORDER FIX (a11y) ----------
+    // Blogger content mein h4 headings h2 ke baad direct aati thin (h3 skip)
+    // -> screen readers + Lighthouse "heading order" fail. h4 ko h3 banao.
+    try {
+      processed = processed.replace(/<h4([^>]*)>/gi, '<h3$1 class="content-h3">');
+      processed = processed.replace(/<\/h4>/gi, '</h3>');
+    } catch {}
+
     // ---------- LAZY IMAGES (speed) ----------
     try {
       processed = processed.replace(/<img\s/gi, '<img loading="lazy" decoding="async" ');
