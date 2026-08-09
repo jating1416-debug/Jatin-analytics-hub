@@ -2,16 +2,7 @@ import type { Metadata } from 'next';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ReadingProgress from '@/components/ReadingProgress';
-import SmartAssistant from '@/components/SmartAssistant';
-import ClientWidgets from '@/components/ClientWidgets';
-import CheatSheet from '@/components/CheatSheet';
-import CommandPalette from '@/components/CommandPalette';
-import MobileStickyBar from '@/components/MobileStickyBar';
-import ProductivityHub from '@/components/ProductivityHub';
-import CodeHighlighter from '@/components/CodeHighlighter';
-import ImageLightbox from '@/components/ImageLightbox';
-import KonamiCode from '@/components/KonamiCode';
-import ReadingHistory from '@/components/ReadingHistory';
+import LazyWidgets from '@/components/LazyWidgets';
 import PremiumFX from '@/components/PremiumFX';
 import FontLoader from '@/components/FontLoader';
 import { SITE_NAME, SITE_DESC, SITE_URL } from '@/lib/utils';
@@ -65,16 +56,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Navbar />
         {children}
         <Footer />
-        <SmartAssistant />
-        <ClientWidgets />
-        <CheatSheet />
-        <CommandPalette />
-        <MobileStickyBar />
-        <ProductivityHub />
-        <CodeHighlighter />
-        <ImageLightbox />
-        <KonamiCode />
-        <ReadingHistory />
+        {/* HEAVY WIDGETS - lazy load (performance fix) */}
+        <LazyWidgets />
       </body>
     </html>
   );

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
+import { getSidebar } from '@/lib/client-sidebar';
 
 // SIDEBAR CLIENT - sidebar data CLIENT-side fetch karta hai (/api/sidebar)
 // Isse home/article pages server pe kam queries karte hain -> FAST loading
@@ -17,9 +18,8 @@ export default function SidebarClient() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/sidebar')
-      .then((r) => r.json())
-      .then((d) => { if (!cancelled) setData(d); })
+    getSidebar()
+      .then((d) => { if (!cancelled) { if (d) setData(d); else setFailed(true); } })
       .catch(() => { if (!cancelled) setFailed(true); });
     return () => { cancelled = true; };
   }, []);

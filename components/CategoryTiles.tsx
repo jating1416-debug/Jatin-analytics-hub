@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { getSidebar } from '@/lib/client-sidebar';
 
 // CATEGORY TILES v3 - PAGESPEED FIX (LCP 11.67s -> ~1s)
 // Problem thi: tiles client-side fetch ke baad aati thin (1-2s+ delay)
@@ -26,16 +27,13 @@ export default function CategoryTiles() {
   // counts SIRF update (text) - tiles pehle se rendered hain, koi shift nahi
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/sidebar')
-      .then((r) => r.json())
-      .then((d) => {
-        if (!cancelled && d && d.categories) {
-          const c: Record<string, number> = {};
-          d.categories.forEach((x: any) => { c[x.slug] = x.count; });
-          setCounts(c);
-        }
-      })
-      .catch(() => {});
+    getSidebar().then((d) => {
+      if (!cancelled && d && d.categories) {
+        const c: Record<string, number> = {};
+        d.categories.forEach((x: any) => { c[x.slug] = x.count; });
+        setCounts(c);
+      }
+    });
     return () => { cancelled = true; };
   }, []);
 

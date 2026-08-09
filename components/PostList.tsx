@@ -248,8 +248,10 @@ export default function PostList() {
                   <div className="post-tags">
                     {p.category && <Link className="post-tag" href={`/category/${p.category.slug}`}>{p.category.name}</Link>}
                   </div>
-                  <Link className="read-more-btn" href={`/${p.category?.slug || 'post'}/${p.slug}`} aria-label={`Read More: ${p.title}`}>
-                    <span data-i18n="f.readmore">Read More</span> <i className="fas fa-arrow-right" />
+                  <Link className="read-more-btn" href={`/${p.category?.slug || 'post'}/${p.slug}`}>
+                    <span data-i18n="f.readmore">Read More</span>
+                    <span className="sr-only">: {p.title}</span>
+                    <i className="fas fa-arrow-right" />
                   </Link>
                 </div>
               </div>

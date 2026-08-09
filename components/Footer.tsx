@@ -16,7 +16,7 @@ const LEGAL = [
   { href: '/misc/privacy-policy', label: 'Privacy Policy' },
   { href: '/misc/disclaimer', label: 'Disclaimer' },
   { href: '/misc/terms', label: 'Terms & Conditions' },
-  { href: '/misc/dmca', label: 'DMCA' },
+  { href: '/misc/dmca-policy', label: 'DMCA' },
 ];
 
 export default function Footer() {

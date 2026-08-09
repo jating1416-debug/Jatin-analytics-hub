@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { getSidebar } from '@/lib/client-sidebar';
 
 // PREMIUM HERO v2 - dark gradient mesh, floating orbs, rotating words, live stats
 const WORDS = ['SQL', 'Python', 'Power BI', 'Excel', 'Data Stories'];
@@ -22,14 +23,11 @@ export default function Hero({
   // LIVE STATS - /api/sidebar se real numbers (server pe koi query nahi)
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/sidebar')
-      .then((r) => r.json())
-      .then((d) => {
-        if (!cancelled && d && d.totalPosts) {
-          setLiveStats({ posts: d.totalPosts, topics: d.totalCategories || 7 });
-        }
-      })
-      .catch(() => {});
+    getSidebar().then((d) => {
+      if (!cancelled && d && d.totalPosts) {
+        setLiveStats({ posts: d.totalPosts, topics: d.totalCategories || 7 });
+      }
+    });
     return () => { cancelled = true; };
   }, []);
 

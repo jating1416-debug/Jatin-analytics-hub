@@ -62,8 +62,8 @@ export default function ArticleCard({ article }: { article: ArticleWithCategory 
               </Link>
             )}
           </div>
-          <Link className="read-more-btn" href={`/${catSlug}/${article.slug}`} aria-label={`Read More: ${article.title}`}>
-            Read More <i className="fas fa-arrow-right" />
+          <Link className="read-more-btn" href={`/${catSlug}/${article.slug}`}>
+            Read More <span className="sr-only">: {article.title}</span> <i className="fas fa-arrow-right" />
           </Link>
         </div>
       </div>

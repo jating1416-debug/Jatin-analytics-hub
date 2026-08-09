@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { getSidebar } from '@/lib/client-sidebar';
 
 // HOT PICKS CAROUSEL v2 - PAGESPEED FIX (CLS)
 // Skeleton cards (fixed height) jab data load ho raha ho
@@ -28,8 +29,7 @@ export default function HotPicksCarousel() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/sidebar')
-      .then((r) => r.json())
+    getSidebar()
       .then((d) => {
         if (!cancelled && d && d.featured && d.featured.length > 0) setPicks(d.featured);
       })
