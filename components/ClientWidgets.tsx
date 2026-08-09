@@ -63,6 +63,7 @@ export default function ClientWidgets() {
       {/* Back to top */}
       {showTop && (
         <button
+          aria-label="Back to top"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           style={{
             position: 'fixed', right: 20, bottom: 86, width: 44, height: 44, borderRadius: '50%',

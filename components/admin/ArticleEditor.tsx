@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import SeoChecker from '@/components/admin/SeoChecker';
+import RichTextEditor from '@/components/admin/RichTextEditor';
 
 type Category = { id: number; name: string; slug: string };
 
@@ -23,6 +24,8 @@ export default function ArticleEditor({
     metaDescription: string;
     tags: string[];
     featured: boolean;
+    scheduledAt?: string | null;
+    noindex?: boolean;
   };
   articleId?: number;
 }) {
@@ -38,6 +41,10 @@ export default function ArticleEditor({
   const [tags, setTags] = useState<string[]>(initial?.tags || []);
   const [tagInput, setTagInput] = useState('');
   const [featured, setFeatured] = useState(initial?.featured || false);
+  const [scheduledAt, setScheduledAt] = useState(initial?.scheduledAt || '');
+  const [noindex, setNoindex] = useState(initial?.noindex || false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const lastSavedRef = useRef(JSON.stringify({ title: initial?.title, content: initial?.content }));
   const [mode, setMode] = useState<'write' | 'html' | 'preview'>('write');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
@@ -56,51 +63,6 @@ export default function ArticleEditor({
     background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-dark)',
     padding: '5px 10px', borderRadius: 6, cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
     marginRight: 4,
-  };
-
-  // ---------- WYSIWYG helpers ----------
-  const wrapSelection = (before: string, after: string) => {
-    const area = document.getElementById('rich-editor') as HTMLTextAreaElement | null;
-    if (!area) return;
-    const start = area.selectionStart;
-    const end = area.selectionEnd;
-    const selected = content.substring(start, end) || 'text';
-    const next = content.slice(0, start) + before + selected + after + content.slice(end);
-    setContent(next);
-    setTimeout(() => {
-      area.focus();
-      area.setSelectionRange(start + before.length, start + before.length + selected.length);
-    }, 0);
-  };
-
-  const insertTag = (tag: string) => {
-    const open = `<span style="background:rgba(102,126,234,0.15);color:var(--primary);padding:2px 8px;border-radius:10px;font-size:0.85rem;font-weight:600;">`;
-    wrapSelection(open, `</span>`);
-  };
-
-  const insertCallout = (type: string, label: string, color: string, bg: string) => {
-    const block = `\n\n<div class="callout callout-${type}" style="border-radius:10px;padding:14px 18px;margin:18px 0;border-left:4px solid ${color};background:${bg}"><b>${label}</b><br/></div>\n\n`;
-    const area = document.getElementById('rich-editor') as HTMLTextAreaElement | null;
-    if (!area) return;
-    const start = area.selectionStart;
-    setContent(content.slice(0, start) + block + content.slice(start));
-    setTimeout(() => {
-      area.focus();
-      area.setSelectionRange(start + block.length - 7, start + block.length - 7);
-    }, 0);
-  };
-
-  const insertHeading = (level: number) => {
-    const tag = `<h${level}>`;
-    wrapSelection(tag, `</h${level}>`);
-  };
-
-  const applyFontSize = (size: string) => {
-    wrapSelection(`<span style="font-size:${size}">`, `</span>`);
-  };
-
-  const applyColor = (color: string) => {
-    wrapSelection(`<span style="color:${color}">`, `</span>`);
   };
 
   // ---------- Image upload (Supabase Storage via API) ----------
@@ -132,12 +94,41 @@ export default function ArticleEditor({
     const t = tagInput.trim();
     if (t && !tags.includes(t)) {
       setTags([...tags, t]);
-      insertTag(t);
+      // tag ko post content mein bhi visible span ke roop mein jodo
+      setContent((c) => c + `<span style="background:rgba(102,126,234,0.15);color:var(--primary);padding:2px 8px;border-radius:10px;font-size:0.85rem;font-weight:600;">${t}</span> `);
     }
     setTagInput('');
   };
 
   const removeTag = (t: string) => setTags(tags.filter((x) => x !== t));
+
+  // ---------- DRAFT AUTOSAVE (har 30 sec, kuch bhi nahi jayega) ----------
+  useEffect(() => {
+    const iv = setInterval(() => {
+      const snapshot = JSON.stringify({ title, content, excerpt, categoryId });
+      if (snapshot === lastSavedRef.current) return; // koi change nahi
+      if (!title.trim() && !content.trim()) return;
+      setAutoSaving(true);
+      fetch(articleId ? `/api/articles/${articleId}` : '/api/articles', {
+        method: articleId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title || 'Untitled Draft',
+          slug, content, excerpt, categoryId, status: 'DRAFT',
+          coverImage, metaDescription, tags, featured, scheduledAt: scheduledAt || undefined,
+        }),
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          lastSavedRef.current = snapshot;
+          if (!articleId && d.id) window.history.replaceState(null, '', `/admin/articles/${d.id}/edit`);
+        })
+        .catch(() => {})
+        .finally(() => setAutoSaving(false));
+    }, 30000);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, content, excerpt, categoryId, slug, coverImage, metaDescription, tags, featured, scheduledAt]);
 
   // ---------- Save ----------
   const save = async (finalStatus?: string) => {
@@ -151,10 +142,13 @@ export default function ArticleEditor({
         body: JSON.stringify({
           title, slug, content, excerpt, categoryId, status: target,
           coverImage, metaDescription, tags, featured,
+          scheduledAt: scheduledAt || undefined,
+          noindex,
         }),
       });
       const data = await res.json();
       if (res.ok) {
+        lastSavedRef.current = JSON.stringify({ title, content, excerpt, categoryId });
         const catName = categories.find((c) => c.id === categoryId)?.name || '';
         setMsg({
           type: 'ok',
@@ -203,6 +197,8 @@ export default function ArticleEditor({
           </a>
         )}
         {uploading && <span style={{ alignSelf: 'center', fontSize: '0.8rem', color: 'var(--text-light)' }}>⏳ Uploading...</span>}
+        {autoSaving && <span style={{ alignSelf: 'center', fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 700 }}><i className="fas fa-sync fa-spin" /> Autosave...</span>}
+        {!autoSaving && !uploading && <span style={{ alignSelf: 'center', fontSize: '0.72rem', color: 'var(--text-light)' }}>💾 Har 30 sec auto-save</span>}
         <span className="admin-editor-stats">
           <span><i className="fas fa-file-word" /> {wordCount.toLocaleString()} words</span>
           <span><i className="fas fa-clock" /> {readMins} min read</span>
@@ -234,6 +230,7 @@ export default function ArticleEditor({
           <select style={inputStyle} value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="DRAFT">Draft</option>
             <option value="PUBLISHED">Published</option>
+            <option value="SCHEDULED">Scheduled</option>
             <option value="ARCHIVED">Archived</option>
           </select>
         </div>
@@ -286,6 +283,36 @@ export default function ArticleEditor({
         <span style={{ fontSize: '0.88rem', color: 'var(--text-dark)' }}>Is post ko homepage pe featured karo ⭐</span>
       </label>
 
+      {/* SCHEDULE (Blogger jaisa) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+        <div>
+          <label style={labelStyle}>Schedule Publish (optional)</label>
+          <input
+            type="datetime-local"
+            style={inputStyle}
+            value={scheduledAt}
+            onChange={(e) => setScheduledAt(e.target.value)}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>SEO: Noindex</label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', paddingTop: 12 }}>
+            <input type="checkbox" checked={noindex} onChange={(e) => setNoindex(e.target.checked)} />
+            <span style={{ fontSize: '0.88rem', color: 'var(--text-dark)' }}>Google ko is page pe index nahi karna (private posts)</span>
+          </label>
+        </div>
+      </div>
+      {status === 'SCHEDULED' && !scheduledAt && (
+        <div style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 700, marginBottom: 10 }}>
+          ⚠️ Status SCHEDULED hai — upar date/time bhi choose karo!
+        </div>
+      )}
+      {scheduledAt && (
+        <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: 12 }}>
+          📅 Is time pe auto-publish hoga: {new Date(scheduledAt).toLocaleString('en-IN')}
+        </div>
+      )}
+
       {/* ---------- EDITOR MODE SWITCH ---------- */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '6px 0 10px', flexWrap: 'wrap', gap: 8 }}>
         <label style={{ ...labelStyle, marginBottom: 0 }}>Content *</label>
@@ -296,50 +323,13 @@ export default function ArticleEditor({
         </div>
       </div>
 
-      {/* ---------- WYSIWYG TOOLBAR (write mode) ---------- */}
+      {/* ---------- WRITE MODE: Blogger-style WYSIWYG (type karo, HTML khud banta hai) ---------- */}
       {mode === 'write' && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8, padding: 8, border: '1px solid var(--border)', borderRadius: 10, background: 'var(--card-bg)' }}>
-          <button style={toolbarBtn} onClick={() => wrapSelection('<b>', '</b>')} title="Bold"><b>B</b></button>
-          <button style={toolbarBtn} onClick={() => wrapSelection('<i>', '</i>')} title="Italic"><i>I</i></button>
-          <button style={toolbarBtn} onClick={() => wrapSelection('<u>', '</u>')} title="Underline"><u>U</u></button>
-          <button style={toolbarBtn} onClick={() => insertHeading(2)} title="H2">H2</button>
-          <button style={toolbarBtn} onClick={() => insertHeading(3)} title="H3">H3</button>
-          <button style={toolbarBtn} onClick={() => wrapSelection('<ul>\n  <li>', '</li>\n</ul>')} title="List">• List</button>
-          <button style={toolbarBtn} onClick={() => wrapSelection('<pre><code>', '</code></pre>')} title="Code block">&lt;/&gt; Code</button>
-          <button style={toolbarBtn} onClick={() => wrapSelection('<a href="https://" target="_blank">', '</a>')} title="Link">🔗</button>
-          <button style={toolbarBtn} onClick={() => wrapSelection('<img src="https://" alt="" style="max-width:100%;border-radius:8px;"/>', '')} title="Image">🖼️</button>
-          <button style={toolbarBtn} onClick={() => wrapSelection('<table border="1" cellpadding="6" style="border-collapse:collapse;"><tr><th>Col1</th><th>Col2</th></tr><tr><td>a</td><td>b</td></tr></table>', '')} title="Table">▦ Table</button>
-          <button style={toolbarBtn} onClick={() => insertCallout('tip', '💡 Tip', '#10b981', 'rgba(16,185,129,0.10)')} title="Tip box">💡 Tip</button>
-          <button style={toolbarBtn} onClick={() => insertCallout('note', '📝 Note', '#667eea', 'rgba(102,126,234,0.10)')} title="Note box">📝 Note</button>
-          <button style={toolbarBtn} onClick={() => insertCallout('warning', '⚠️ Warning', '#f59e0b', 'rgba(245,158,11,0.12)')} title="Warning box">⚠️ Warn</button>
-          <span style={{ alignSelf: 'center', marginLeft: 4 }}>|</span>
-          <select style={{ ...toolbarBtn, padding: '4px 6px' }} onChange={(e) => e.target.value && applyFontSize(e.target.value)} defaultValue="">
-            <option value="" disabled>Text Size</option>
-            <option value="0.85rem">Small</option>
-            <option value="1rem">Normal</option>
-            <option value="1.15rem">Large</option>
-            <option value="1.3rem">X-Large</option>
-            <option value="1.5rem">Heading</option>
-          </select>
-          <input type="color" title="Text Color" onChange={(e) => applyColor(e.target.value)} style={{ width: 34, height: 30, border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', padding: 0 }} />
-        </div>
+        <RichTextEditor value={content} onChange={setContent} />
       )}
 
-      {/* ---------- EDITOR AREA ---------- */}
-      {mode === 'write' ? (
-        <textarea
-          id="rich-editor"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={'Write your content here...\n\nUse the toolbar above to format. Click HTML tab to paste raw HTML code.'}
-          style={{
-            width: '100%', minHeight: 420, padding: 14, border: '1px solid var(--border)',
-            borderRadius: 10, background: '#1e293b', color: '#e2e8f0',
-            fontFamily: "'Fira Code', monospace", fontSize: '0.82rem', lineHeight: 1.6,
-            boxSizing: 'border-box', outline: 'none', whiteSpace: 'pre-wrap',
-          }}
-        />
-      ) : mode === 'html' ? (
+      {/* ---------- HTML MODE ---------- */}
+      {mode === 'html' ? (
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -351,13 +341,13 @@ export default function ArticleEditor({
             boxSizing: 'border-box', outline: 'none', whiteSpace: 'pre',
           }}
         />
-      ) : (
+      ) : mode === 'preview' ? (
         <div
           className="post-body entry-content"
           style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 16, minHeight: 420, fontSize: '1rem', lineHeight: 1.8 }}
           dangerouslySetInnerHTML={{ __html: content || '<p style="color:var(--text-light)">Preview yahan dikhega...</p>' }}
         />
-      )}
+      ) : null}
     </div>
   );
 }

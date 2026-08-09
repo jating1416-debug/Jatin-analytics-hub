@@ -3,28 +3,56 @@ import StatCard from '@/components/admin/StatCard';
 
 export const dynamic = 'force-dynamic';
 
-// ADMIN ANALYTICS v2 - donut chart, top posts, category views, reading hours
+// ADMIN ANALYTICS v3 - FAST
+// FIX: Pehle 9 sequential queries -> ab 4-5:
+//   1) saari articles (ek select) -> total/published/drafts/views/reading/top10 sab isi se
+//   2) categories + views per category
+//   3) pageview trend (30 din)
+//   4) top searches (optional)
 export default async function AdminAnalytics() {
   let stats: any = null;
   let dbError = false;
   try {
-    const totalViews = await prisma.article.aggregate({ _sum: { viewCount: true } });
-    const totalPosts = await prisma.article.count();
-    const published = await prisma.article.count({ where: { status: 'PUBLISHED' } });
-    const drafts = await prisma.article.count({ where: { status: 'DRAFT' } });
-    const topPosts = await prisma.article.findMany({ orderBy: { viewCount: 'desc' }, take: 10, include: { category: true } });
-    const cats = await prisma.category.findMany({ include: { articles: { select: { viewCount: true, readingTime: true } } } });
+    // ---- QUERY 1: saari articles (viewCount desc - top10 ke liye bhi ready) ----
+    const articles = await prisma.article.findMany({
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        viewCount: true,
+        readingTime: true,
+        category: { select: { name: true, slug: true } },
+      },
+      orderBy: { viewCount: 'desc' },
+      take: 200,
+    });
 
-    // reading minutes: readingTime * views (approx)
-    let readingMinutes = 0;
-    try {
-      const allArts = await prisma.article.findMany({ select: { viewCount: true, readingTime: true } });
-      readingMinutes = allArts.reduce((s, a) => s + (a.readingTime || 3) * a.viewCount, 0);
-    } catch {}
+    const totalViews = articles.reduce((s, a) => s + a.viewCount, 0);
+    const totalPosts = articles.length;
+    const published = articles.filter((a) => a.status === 'PUBLISHED').length;
+    const drafts = articles.filter((a) => a.status === 'DRAFT').length;
+    const topPosts = articles.filter((a) => a.status === 'PUBLISHED').slice(0, 10);
+    const readingMinutes = articles.reduce((s, a) => s + (a.readingTime || 3) * a.viewCount, 0);
 
-    // VIEWS TREND - last 30 din (PageView table se, sirf admin)
+    // ---- QUERY 2: categories + views ----
+    const cats = await prisma.category.findMany({
+      include: {
+        _count: { select: { articles: true } },
+        articles: { select: { viewCount: true } },
+      },
+    });
+    const catViews = cats
+      .map((c: any) => ({
+        name: c.name,
+        slug: c.slug,
+        posts: c._count.articles,
+        views: c.articles.reduce((s: number, a: any) => s + a.viewCount, 0),
+      }))
+      .sort((a: any, b: any) => b.views - a.views);
+
+    // ---- QUERY 3: views trend (30 din, PageView table) ----
     let trend: { day: string; count: number }[] = [];
-    let topSearches: { term: string; count: number }[] = [];
     try {
       const since = new Date();
       since.setDate(since.getDate() - 29);
@@ -38,7 +66,6 @@ export default async function AdminAnalytics() {
         const key = r.createdAt.toISOString().slice(0, 10);
         byDay.set(key, (byDay.get(key) || 0) + 1);
       });
-      // 30 din fill karo (0 wale din bhi)
       trend = [];
       for (let i = 29; i >= 0; i--) {
         const d = new Date();
@@ -48,7 +75,8 @@ export default async function AdminAnalytics() {
       }
     } catch (e) { console.error('trend error:', e); }
 
-    // TOP SEARCHES (SearchLog table - npx prisma db push ke baad live)
+    // ---- QUERY 4: top searches (optional) ----
+    let topSearches: { term: string; count: number }[] = [];
     try {
       const logs = await prisma.searchLog.findMany({
         where: { createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
@@ -63,19 +91,12 @@ export default async function AdminAnalytics() {
     } catch (e) { console.error('top searches error:', e); }
 
     stats = {
-      totalViews: totalViews._sum.viewCount || 0,
+      totalViews,
       totalPosts,
       published,
       drafts,
       topPosts,
-      catViews: cats
-        .map((c: any) => ({
-          name: c.name,
-          slug: c.slug,
-          posts: c.articles.length,
-          views: c.articles.reduce((s: number, a: any) => s + a.viewCount, 0),
-        }))
-        .sort((a: any, b: any) => b.views - a.views),
+      catViews,
       readingHours: Math.round(readingMinutes / 60),
       trend,
       topSearches,

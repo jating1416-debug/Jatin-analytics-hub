@@ -1114,7 +1114,7 @@
   .sql-kw { color: #c792ea; font-weight: 600; }
   .sql-str { color: #a5d6a7; }
   .sql-num { color: #f78c6c; }
-  .sql-com { color: #64748b; font-style: italic; }
+  .sql-com { color: #8b9bb4; font-style: italic; }
   .sql-pass { background: rgba(22,163,74,0.12); color: #16a34a; font-weight: 700; padding: 12px 16px; border-radius: 10px; margin-bottom: 10px; white-space: normal; }
   .sql-fail { background: rgba(239,68,68,0.10); color: #ef4444; font-weight: 700; padding: 12px 16px; border-radius: 10px; margin-bottom: 10px; white-space: normal; }
 
@@ -2302,7 +2302,7 @@
   .footer-desc {
     font-size: 0.88rem;
     line-height: 1.7;
-    color: #718096;
+    color: #94a3b8;
     margin-bottom: 18px;
   }
 
@@ -2340,7 +2340,7 @@
   .footer-links li { margin-bottom: 10px; }
 
   .footer-links a {
-    color: #718096 !important;
+    color: #94a3b8 !important;
     font-size: 0.88rem;
     transition: var(--transition);
     display: flex;
@@ -3705,14 +3705,14 @@
     -webkit-text-fill-color: transparent;
     font-size: 1.25rem;
   }
-  .footer h4 {
+  .footer h4, .footer .footer-h {
     color: #e2e8f0;
     font-family: var(--font-head);
     font-size: 0.95rem;
     position: relative;
     padding-bottom: 8px;
   }
-  .footer h4::after {
+  .footer h4::after, .footer .footer-h::after {
     content: '';
     position: absolute;
     left: 0; bottom: 0;
@@ -3737,7 +3737,7 @@
   }
   .footer-bottom {
     border-top: 1px solid rgba(255,255,255,0.08);
-    color: #64748b;
+    color: #94a3b8;
     font-size: 0.82rem;
     /* floating chat button copyright ko cover na kare */
     padding-right: 96px;
@@ -3990,7 +3990,7 @@
     box-shadow: 0 4px 12px -2px rgba(79,70,229,0.5);
   }
   .admin-user-name { font-size: 0.85rem; font-weight: 700; color: #e2e8f0; }
-  .admin-user-role { font-size: 0.66rem; color: #64748b; }
+  .admin-user-role { font-size: 0.66rem; color: #94a3b8; }
   .admin-user-card button {
     background: rgba(239,68,68,0.14); border: 1px solid rgba(239,68,68,0.3);
     color: #fca5a5; cursor: pointer; font-size: 0.75rem; font-weight: 700;
@@ -4156,7 +4156,7 @@
   }
   .admin-status-pill.pub { background: rgba(22,163,74,0.14); color: #16a34a; }
   .admin-status-pill.draft { background: rgba(245,158,11,0.15); color: #f59e0b; }
-  .admin-status-pill.arch { background: rgba(100,116,139,0.16); color: #64748b; }
+  .admin-status-pill.arch { background: rgba(100,116,139,0.16); color: #475569; }
 
   /* ---------- BARS ---------- */
   .admin-bars { display: flex; flex-direction: column; gap: 11px; }
@@ -5024,3 +5024,90 @@
   /* table/code blocks ke liye minimum height reserve nahi (unme CLS nahi) */
 
   /* preload hint: category tiles ab static hain - koi extra wait nahi */
+
+  /* ============================================================
+     BLOGGER-STYLE WYSIWYG RICH EDITOR (admin)
+  ============================================================ */
+  .rte { margin-bottom: 12px; }
+  .rte-toolbar {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    padding: 8px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px 12px 0 0;
+    border-bottom: none;
+    box-shadow: var(--shadow);
+    position: sticky; top: 60px; z-index: 40;
+  }
+  .rte-sep { width: 1px; height: 22px; background: var(--border); margin: 4px 3px; align-self: center; }
+  .rte-editor {
+    min-height: 420px;
+    padding: 18px 20px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 0 0 12px 12px;
+    color: var(--text-dark);
+    font-size: 0.97rem;
+    line-height: 1.8;
+    outline: none;
+    overflow-y: auto;
+  }
+  .rte-editor:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.12); }
+  .rte-editor:empty::before {
+    content: attr(data-placeholder);
+    color: var(--text-light);
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  /* editor ke andar formatting (Blogger jaisa live look) */
+  .rte-editor h2 { font-size: 1.4rem; font-weight: 700; color: var(--text-dark); margin: 20px 0 10px; }
+  .rte-editor h3 { font-size: 1.15rem; font-weight: 700; color: var(--primary); margin: 16px 0 8px; }
+  .rte-editor p { margin-bottom: 10px; }
+  .rte-editor ul, .rte-editor ol { padding-left: 24px; margin-bottom: 10px; }
+  .rte-editor a { color: var(--primary); text-decoration: underline; }
+  .rte-editor code {
+    background: #1e293b; color: #e2e8f0;
+    padding: 2px 7px; border-radius: 5px;
+    font-family: 'Fira Code', monospace; font-size: 0.85em;
+  }
+  .rte-editor pre {
+    background: #0e1526; color: #dbe4ff;
+    padding: 14px 16px; border-radius: 10px;
+    overflow-x: auto; margin: 12px 0;
+    font-family: 'Fira Code', monospace; font-size: 0.85rem; line-height: 1.6;
+  }
+  .rte-editor pre code { background: transparent; color: inherit; padding: 0; }
+  .rte-editor blockquote {
+    background: var(--gradient-soft);
+    border-left: 4px solid var(--primary);
+    padding: 12px 16px; border-radius: 0 10px 10px 0;
+    margin: 12px 0; font-style: italic;
+  }
+  .rte-editor img { max-width: 100%; border-radius: 8px; }
+  .rte-editor table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.88rem; }
+  .rte-editor th { background: var(--gradient-soft); color: var(--text-dark); font-weight: 700; }
+  .rte-editor th, .rte-editor td { border: 1px solid var(--border); padding: 8px 10px; }
+  .rte-hint {
+    margin-top: 8px;
+    font-size: 0.75rem; color: var(--text-light);
+    background: var(--gradient-soft);
+    border-radius: 10px; padding: 8px 14px;
+  }
+
+  /* ADSENSE SLOTS */
+  .ad-slot {
+    margin: 18px 0;
+    min-height: 90px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--gradient-soft);
+    border: 1px dashed rgba(79,70,229,0.25);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .ad-slot ins { min-height: 90px; }
+  .sidebar .ad-slot { margin: 0 0 20px; }
+
+  /* CONTRAST FIX - Hub button (lighthouse report: white text on light bg fail)
+     .cs-navbar-btn mein color:white !important tha jo inline color ko override kar raha tha */
+  .hub-btn-text { color: var(--text-dark) !important; }
+  .hub-btn-text:hover { color: var(--primary) !important; }

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import HubSidebar from '@/components/HubSidebar';
+import AdSlots from '@/components/AdSlots';
 
 const TOOLS = [
   { slug: 'kpi-calculator', icon: '📊', name: 'KPI Calculator' },
@@ -44,9 +45,24 @@ export default function Sidebar({
   recent: { title: string; slug: string; categorySlug: string; date: string }[];
   popular: { title: string; slug: string; categorySlug: string; views: number }[];
 }) {
+  const [widgets, setWidgets] = useState<Record<string, boolean> | null>(null);
+
+  // SETTINGS - widget on/off (admin Settings se)
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/settings')
+      .then((r) => r.json())
+      .then((d) => { if (!cancelled && d && d.widgets) setWidgets(d.widgets); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const w = (k: string) => (widgets === null ? true : widgets[k] !== false);
+
   return (
     <aside className="sidebar">
       {/* 👤 ABOUT WIDGET - photo + naam + social links (Blogger wala) */}
+      {w('about') && (
       <div className="sidebar-widget about-widget" style={{ textAlign: 'center' }}>
         <div className="about-avatar" style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.2rem', margin: '0 auto 12px', boxShadow: '0 4px 15px rgba(102,126,234,0.3)' }}>
           👤
@@ -66,17 +82,19 @@ export default function Sidebar({
           <a className="social-link social-email" href="mailto:jating1416@gmail.com" style={{ background: '#ea4335', color: '#fff', padding: '8px', borderRadius: 8, textDecoration: 'none', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center' }}><i className="fas fa-envelope" /> Email</a>
         </div>
       </div>
+      )}
 
       {/* ⚡ PRODUCTIVITY HUB - sidebar mein hamesha khula */}
-      <HubSidebar />
+      {w('hub') && <HubSidebar />}
 
       {/* QUOTE OF THE DAY */}
-      <QuoteOfDay />
+      {w('quote') && <QuoteOfDay />}
 
       {/* READING LIST WIDGET (live) */}
-      <ReadingListWidget />
+      {w('readingList') && <ReadingListWidget />}
 
       {/* RANDOM + SAVED */}
+      {w('randomSaved') && (
       <div className="sidebar-widget" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button
           onClick={() => { window.location.href = '/api/random-article'; }}
@@ -91,8 +109,10 @@ export default function Sidebar({
           🔖 Reading List
         </Link>
       </div>
+      )}
 
       {/* ANALYST TOOLKIT */}
+      {w('toolkit') && (
       <div className="sidebar-widget">
         <div className="widget-title"><i className="fas fa-toolbox" /> <span data-i18n="sidebar.toolkit">Analyst Toolkit</span></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -103,8 +123,10 @@ export default function Sidebar({
           ))}
         </div>
       </div>
+      )}
 
       {/* DEVELOPER TOOLBOX */}
+      {w('toolbox') && (
       <div className="sidebar-widget">
         <div className="widget-title"><i className="fas fa-wrench" /> <span data-i18n="sidebar.toolbox">Developer Toolbox</span></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -115,8 +137,10 @@ export default function Sidebar({
           ))}
         </div>
       </div>
+      )}
 
       {/* ALL TOOLS */}
+      {w('allTools') && (
       <div className="sidebar-widget">
         <div className="widget-title"><i className="fas fa-tools" /> <span data-i18n="sidebar.alltools">All Tools</span></div>
         <ul className="hub-list" style={{ maxHeight: 220, overflowY: 'auto' }}>
@@ -129,7 +153,9 @@ export default function Sidebar({
           ))}
         </ul>
       </div>
+      )}
 
+      {w('categories') && (
       <div className="sidebar-widget">
         <div className="widget-title"><i className="fas fa-layer-group" /> <span data-i18n="sidebar.categories">Categories</span></div>
         <ul className="category-list">
@@ -144,7 +170,9 @@ export default function Sidebar({
           ))}
         </ul>
       </div>
+      )}
 
+      {w('recent') && (
       <div className="sidebar-widget">
         <div className="widget-title"><i className="fas fa-clock" /> <span data-i18n="sidebar.recent">Recent Posts</span></div>
         <ul className="recent-posts-list">
@@ -158,7 +186,9 @@ export default function Sidebar({
           ))}
         </ul>
       </div>
+      )}
 
+      {w('popular') && (
       <div className="sidebar-widget">
         <div className="widget-title"><i className="fas fa-fire" /> <span data-i18n="sidebar.popular">Popular Posts</span></div>
         <ul className="recent-posts-list">
@@ -175,8 +205,10 @@ export default function Sidebar({
           ))}
         </ul>
       </div>
+      )}
 
       {/* TELEGRAM */}
+      {w('telegram') && (
       <div className="sidebar-widget">
         <div className="widget-title"><i className="fab fa-telegram-plane" /> Telegram Channel</div>
         <p style={{ fontSize: '0.82rem', color: 'var(--text-light)', marginBottom: 12, lineHeight: 1.5 }}>
@@ -192,13 +224,18 @@ export default function Sidebar({
           <i className="fab fa-telegram-plane" /> Join Channel
         </a>
       </div>
+      )}
 
+      {w('portfolio') && (
       <div className="sidebar-widget cta-widget">
         <div className="widget-title"><i className="fas fa-rocket" /> My Portfolio</div>
         <p>Explore my live Data Analytics projects, Power BI dashboards, and datasets!</p>
         <a className="cta-btn-white" href="https://jatinanalytics.co.in" target="_blank" rel="noopener">🚀 Visit jatinanalytics.co.in</a>
         <a className="cta-btn-outline" href="https://www.kaggle.com/jatinkhandelwal112" target="_blank" rel="noopener">🏆 View Kaggle Datasets</a>
       </div>
+      )}
+      {/* ADS (optional - settings se) */}
+      <AdSlots position="sidebar" />
     </aside>
   );
 }

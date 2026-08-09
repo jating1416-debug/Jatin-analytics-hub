@@ -63,10 +63,13 @@ model Article {
   likeCount       Int          @default(0)
   status          Status       @default(PUBLISHED)
   featured        Boolean      @default(false)
+  scheduledAt     DateTime?
+  noindex         Boolean      @default(false)
   publishedAt     DateTime?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   comments        Comment[]
+  revisions       ArticleRevision[]
 
   @@index([slug])
   @@index([categoryId, status, publishedAt])
@@ -103,6 +106,7 @@ enum Difficulty {
 enum Status {
   DRAFT
   PUBLISHED
+  SCHEDULED
   ARCHIVED
 }
 
@@ -138,9 +142,11 @@ model Comment {
   name      String
   content   String   @db.Text
   likes     Int      @default(0)
+  status    String   @default("approved") // approved | pending | spam
   createdAt DateTime @default(now())
 
   @@index([articleId])
+  @@index([status])
 }
 
 model PageView {
@@ -166,4 +172,32 @@ model SearchLog {
 
   @@index([term])
   @@index([createdAt])
+}
+
+model Setting {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String @db.Text // JSON
+}
+
+model Page {
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique
+  title     String
+  content   String   @db.Text
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ArticleRevision {
+  id        Int      @id @default(autoincrement())
+  articleId Int
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  title     String
+  content   String   @db.Text
+  excerpt   String?
+  createdAt DateTime @default(now())
+
+  @@index([articleId])
 }

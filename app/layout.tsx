@@ -13,6 +13,7 @@ import ImageLightbox from '@/components/ImageLightbox';
 import KonamiCode from '@/components/KonamiCode';
 import ReadingHistory from '@/components/ReadingHistory';
 import PremiumFX from '@/components/PremiumFX';
+import FontLoader from '@/components/FontLoader';
 import { SITE_NAME, SITE_DESC, SITE_URL } from '@/lib/utils';
 import './globals.css';
 
@@ -36,6 +37,11 @@ export const metadata: Metadata = {
   },
   twitter: { card: 'summary_large_image', title: `${SITE_NAME} | Data Analytics Blog`, description: SITE_DESC },
   robots: { index: true, follow: true },
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -44,16 +50,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&family=Fira+Code:wght@400;500&display=swap"
-          rel="stylesheet"
-        />
-        <link
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-          rel="stylesheet"
-        />
+        {/* Fonts + Font Awesome: NON-BLOCKING (mobile LCP fix) - FontLoader client
+            component inject karta hai media="print" trick se (render block nahi).
+            Noscript fallback sirf bina-JS browsers ke liye. */}
+        <noscript>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sora:wght@700;800&family=Fira+Code:wght@400&display=swap" rel="stylesheet" />
+          <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+        </noscript>
       </head>
       <body>
+        <FontLoader />
         <ReadingProgress />
         <PremiumFX />
         <Navbar />

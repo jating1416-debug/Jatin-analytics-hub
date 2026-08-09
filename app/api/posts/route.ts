@@ -9,6 +9,14 @@ export const dynamic = 'force-dynamic';
 const CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' };
 
 export async function GET(req: NextRequest) {
+  // SCHEDULED POSTS - jinki time aa gayi, unhe publish karo (fire & forget)
+  try {
+    await prisma.article.updateMany({
+      where: { status: 'SCHEDULED', scheduledAt: { lte: new Date() } },
+      data: { status: 'PUBLISHED', publishedAt: new Date(), scheduledAt: null },
+    });
+  } catch (e) { console.error('scheduled publish error:', e); }
+
   const all = req.nextUrl.searchParams.get('all') === '1';
   try {
     if (all) {

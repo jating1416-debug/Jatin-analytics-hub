@@ -4,7 +4,12 @@ import StatCard from '@/components/admin/StatCard';
 
 export const dynamic = 'force-dynamic';
 
-// ADMIN DASHBOARD v2 - animated stats + comments + views-per-category chart
+// ADMIN DASHBOARD v3 - FAST (LCP 12.81s -> ~2-3s)
+// FIX: Pehle 8-9 sequential DB queries thi (har ek pooler se ~1.4s = 12s!)
+// Ab: SIRF 3 queries:
+//   1) saari articles (light select) -> total/published/drafts/views/recent sab isi se
+//   2) categories + views per category
+//   3) comments (optional, try/catch)
 export default async function AdminDashboard() {
   let stats = { total: 0, published: 0, drafts: 0, views: 0, categories: 0, comments: 0 };
   let recent: any[] = [];
@@ -13,15 +18,47 @@ export default async function AdminDashboard() {
   let dbError = false;
 
   try {
-    stats.total = await prisma.article.count();
-    stats.published = await prisma.article.count({ where: { status: 'PUBLISHED' } });
-    stats.drafts = await prisma.article.count({ where: { status: 'DRAFT' } });
-    const agg = await prisma.article.aggregate({ _sum: { viewCount: true } });
-    stats.views = agg._sum.viewCount || 0;
-    stats.categories = await prisma.category.count();
-    recent = await prisma.article.findMany({ include: { category: true }, orderBy: { updatedAt: 'desc' }, take: 6 });
+    // ---- QUERY 1: saari articles (ek baar) - light select ----
+    const articles = await prisma.article.findMany({
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        viewCount: true,
+        updatedAt: true,
+        readingTime: true,
+        category: { select: { name: true, slug: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 500,
+    });
 
-    // comments (Comment table — agar abhi tak push nahi hui to gracefully skip)
+    stats.total = articles.length;
+    stats.published = articles.filter((a) => a.status === 'PUBLISHED').length;
+    stats.drafts = articles.filter((a) => a.status === 'DRAFT').length;
+    stats.views = articles.reduce((s, a) => s + a.viewCount, 0);
+    recent = articles.slice(0, 6);
+
+    // ---- QUERY 2: categories + views per category (ek hi call) ----
+    const cats = await prisma.category.findMany({
+      include: {
+        _count: { select: { articles: true } },
+        articles: { select: { viewCount: true } },
+      },
+    });
+    stats.categories = cats.length;
+    catViews = cats
+      .map((c) => ({
+        name: c.name,
+        slug: c.slug,
+        views: c.articles.reduce((s, a) => s + a.viewCount, 0),
+        count: c._count.articles,
+      }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 6);
+
+    // ---- QUERY 3: comments (table pending ho to gracefully skip) ----
     try {
       stats.comments = await prisma.comment.count();
       recentComments = await prisma.comment.findMany({
@@ -32,18 +69,6 @@ export default async function AdminDashboard() {
     } catch (e) {
       console.error('comments not available (prisma db push pending):', e);
     }
-
-    // views per category
-    const cats = await prisma.category.findMany({ include: { articles: { select: { viewCount: true } } } });
-    catViews = cats
-      .map((c) => ({
-        name: c.name,
-        slug: c.slug,
-        views: c.articles.reduce((s, a) => s + a.viewCount, 0),
-        count: c.articles.length,
-      }))
-      .sort((a, b) => b.views - a.views)
-      .slice(0, 6);
   } catch (e) {
     dbError = true;
     console.error('Admin dashboard DB error:', e);

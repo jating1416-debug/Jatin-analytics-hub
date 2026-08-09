@@ -11,7 +11,11 @@ const NAV = [
   { href: '/admin/articles', icon: 'fa-file-lines', label: 'All Articles' },
   { href: '/admin/articles/new', icon: 'fa-pen-to-square', label: 'New Article' },
   { href: '/admin/categories', icon: 'fa-folder-tree', label: 'Categories' },
+  { href: '/admin/comments', icon: 'fa-comments', label: 'Comments' },
+  { href: '/admin/pages', icon: 'fa-file-lines', label: 'Pages' },
+  { href: '/admin/media', icon: 'fa-images', label: 'Media' },
   { href: '/admin/analytics', icon: 'fa-chart-line', label: 'Analytics' },
+  { href: '/admin/settings', icon: 'fa-gear', label: 'Settings' },
 ];
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {

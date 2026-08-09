@@ -47,7 +47,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (Array.isArray(body.tags)) {
       const tagNames = body.tags.map(String).filter(Boolean).slice(0, 10);
       tagConnects = await Promise.all(
-        tagNames.map(async (name) => {
+        tagNames.map(async (name: string) => {
           const tagSlug = slugify(name) || 'tag';
           const tag = await prisma.tag.upsert({
             where: { slug: tagSlug },
@@ -60,6 +60,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       // delete old links
       await prisma.articleTag.deleteMany({ where: { articleId } });
     }
+
+    // REVISION HISTORY - save karo purana version (update se pehle)
+    try {
+      await prisma.articleRevision.create({
+        data: {
+          articleId,
+          title: existing.title,
+          content: existing.content,
+          excerpt: existing.excerpt,
+        },
+      });
+    } catch (e) { console.error('revision save error:', e); }
 
     const article = await prisma.article.update({
       where: { id: articleId },
@@ -75,9 +87,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         readingTime: readingTime(content),
         categoryId,
         status: newStatus,
+        ...(body.scheduledAt !== undefined ? { scheduledAt: body.scheduledAt ? new Date(body.scheduledAt) : null } : {}),
+        ...(body.noindex !== undefined ? { noindex: !!body.noindex } : {}),
         featured: body.featured !== undefined ? !!body.featured : existing.featured,
         ...(tagConnects ? { tags: { create: tagConnects } } : {}),
-        ...(publishNow ? { publishedAt: new Date() } : {}),
+        ...(publishNow ? { publishedAt: new Date(), scheduledAt: null } : {}),
       },
     });
     // ISR cache turant clear (category/status change turant dikhe)

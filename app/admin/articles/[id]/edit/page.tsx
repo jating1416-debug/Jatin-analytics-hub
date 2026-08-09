@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import ArticleEditor from '@/components/admin/ArticleEditor';
+import RevisionList from '@/components/admin/RevisionList';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,8 +32,11 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
           metaDescription: article.metaDescription || '',
           tags: article.tags.map((t) => t.tag.name),
           featured: article.featured,
+          scheduledAt: article.scheduledAt ? new Date(article.scheduledAt.getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : null,
+          noindex: article.noindex,
         }}
       />
+      <RevisionList articleId={article.id} />
     </>
   );
 }

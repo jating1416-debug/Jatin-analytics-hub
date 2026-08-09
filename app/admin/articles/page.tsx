@@ -21,6 +21,8 @@ export default function AdminArticlesPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [bulkCat, setBulkCat] = useState(0);
 
   const load = async () => {
     setLoading(true);
@@ -34,6 +36,13 @@ export default function AdminArticlesPage() {
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, [status, q]);
+
+  useEffect(() => {
+    fetch('/api/categories')
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d)) setCategories(d.map((c) => ({ id: c.id, name: c.name }))); })
+      .catch(() => {});
+  }, []);
 
   const toggle = (id: number) => {
     const next = new Set(selected);
@@ -67,9 +76,27 @@ export default function AdminArticlesPage() {
     load();
   };
 
+  const bulkCategory = async () => {
+    if (selected.size === 0 || !bulkCat) return;
+    if (!confirm(`${selected.size} posts ki category change karni hai?`)) return;
+    let ok = 0, fail = 0;
+    for (const id of selected) {
+      const res = await fetch(`/api/articles/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categoryId: bulkCat }),
+      });
+      if (res.ok) ok++; else fail++;
+    }
+    setMsg({ type: ok > 0 ? 'ok' : 'err', text: `✅ ${ok} category change${fail ? ` | ❌ ${fail} fail` : ''}` });
+    setSelected(new Set());
+    load();
+  };
+
   const STATUS_TABS = [
     { key: 'ALL', label: 'All' },
     { key: 'PUBLISHED', label: 'Published' },
+    { key: 'SCHEDULED', label: 'Scheduled' },
     { key: 'DRAFT', label: 'Draft' },
     { key: 'ARCHIVED', label: 'Archived' },
   ];
@@ -114,6 +141,19 @@ export default function AdminArticlesPage() {
           <button onClick={() => bulk('PUBLISHED')} className="admin-bulk-btn pub"><i className="fas fa-circle-check" /> Publish</button>
           <button onClick={() => bulk('DRAFT')} className="admin-bulk-btn draft"><i className="fas fa-pen" /> Draft</button>
           <button onClick={() => bulk('DELETE')} className="admin-bulk-btn del"><i className="fas fa-trash" /> Delete</button>
+          <select
+            value={bulkCat}
+            onChange={(e) => setBulkCat(Number(e.target.value))}
+            style={{ padding: '7px 12px', border: '1px solid var(--border)', borderRadius: 16, background: 'var(--card-bg)', color: 'var(--text-dark)', fontSize: '0.75rem', fontWeight: 700 }}
+          >
+            <option value={0}>→ Change Category...</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          {bulkCat > 0 && (
+            <button onClick={bulkCategory} className="admin-bulk-btn" style={{ background: 'var(--primary)', color: '#fff' }}>
+              <i className="fas fa-arrows-rotate" /> Apply
+            </button>
+          )}
         </div>
       )}
 

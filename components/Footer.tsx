@@ -8,13 +8,15 @@ const TOPICS = [
   { href: '/category/career', label: 'Career Guide' },
 ];
 
+// LEGAL LINKS - JATIN KE APNE PAGES (misc/ articles) - koi /p/ page nahi
+// Contact bhi yahin -> /misc/contact (tumhara wala form)
 const LEGAL = [
-  { href: '/p/about', label: 'About' },
-  { href: '/p/contact', label: 'Contact' },
-  { href: '/p/privacy-policy', label: 'Privacy Policy' },
-  { href: '/p/disclaimer', label: 'Disclaimer' },
-  { href: '/p/terms', label: 'Terms & Conditions' },
-  { href: '/p/dmca', label: 'DMCA' },
+  { href: '/misc/about', label: 'About' },
+  { href: '/misc/contact', label: 'Contact' },
+  { href: '/misc/privacy-policy', label: 'Privacy Policy' },
+  { href: '/misc/disclaimer', label: 'Disclaimer' },
+  { href: '/misc/terms', label: 'Terms & Conditions' },
+  { href: '/misc/dmca', label: 'DMCA' },
 ];
 
 export default function Footer() {
@@ -31,16 +33,16 @@ export default function Footer() {
             guidance for aspiring analysts — 100% free.
           </p>
           <div className="footer-social">
-            <a href="https://linkedin.com/in/jatin-kumar-5a46a720a" target="_blank" rel="noopener" title="LinkedIn"><i className="fab fa-linkedin" /></a>
-            <a href="https://github.com/jating1416-debug" target="_blank" rel="noopener" title="GitHub"><i className="fab fa-github" /></a>
-            <a href="https://kaggle.com/jatinkhandelwal112" target="_blank" rel="noopener" title="Kaggle"><i className="fab fa-kaggle" /></a>
-            <a href="mailto:jating1416@gmail.com" title="Email"><i className="fas fa-envelope" /></a>
-            <a href="https://jatinanalytics.co.in" target="_blank" rel="noopener" title="Portfolio"><i className="fas fa-globe" /></a>
+            <a href="https://linkedin.com/in/jatin-kumar-5a46a720a" target="_blank" rel="noopener" aria-label="LinkedIn" title="LinkedIn"><i className="fab fa-linkedin" /></a>
+            <a href="https://github.com/jating1416-debug" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub"><i className="fab fa-github" /></a>
+            <a href="https://kaggle.com/jatinkhandelwal112" target="_blank" rel="noopener" aria-label="Kaggle" title="Kaggle"><i className="fab fa-kaggle" /></a>
+            <a href="mailto:jating1416@gmail.com" aria-label="Email" title="Email"><i className="fas fa-envelope" /></a>
+            <a href="https://jatinanalytics.co.in" target="_blank" rel="noopener" aria-label="Portfolio" title="Portfolio"><i className="fas fa-globe" /></a>
           </div>
         </div>
 
         <div className="footer-col">
-          <h4 data-i18n="footer.topics">Topics</h4>
+          <h3 className="footer-h" data-i18n="footer.topics">Topics</h3>
           <ul className="footer-links">
             {TOPICS.map((t) => (
               <li key={t.href}><Link href={t.href}>{t.label}</Link></li>
@@ -49,11 +51,11 @@ export default function Footer() {
         </div>
 
         <div className="footer-col">
-          <h4 data-i18n="footer.quick">Quick Links</h4>
+          <h3 className="footer-h" data-i18n="footer.quick">Quick Links</h3>
           <ul className="footer-links">
             <li><Link href="/tools">🛠️ All Tools</Link></li>
             <li><Link href="/archive">🗓️ Archive</Link></li>
-            <li><Link href="/contact">📬 Contact</Link></li>
+            <li><Link href="/misc/contact">📬 Contact</Link></li>
             <li><Link href="/search">🔍 Search</Link></li>
             <li><a href="https://jatinanalytics.co.in" target="_blank" rel="noopener">Portfolio</a></li>
             <li><a href="https://kaggle.com/jatinkhandelwal112" target="_blank" rel="noopener">Kaggle</a></li>
@@ -62,7 +64,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-col">
-          <h4 data-i18n="footer.legal">Legal &amp; Info</h4>
+          <h3 className="footer-h" data-i18n="footer.legal">Legal &amp; Info</h3>
           <ul className="footer-links">
             {LEGAL.map((l) => (
               <li key={l.href}><Link href={l.href}>{l.label}</Link></li>

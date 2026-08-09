@@ -137,7 +137,7 @@ export default function Navbar() {
         <button
           className="cs-navbar-btn hub-btn-text"
           onClick={() => window.dispatchEvent(new CustomEvent('open-productivity-hub'))}
-          style={{ background: 'var(--bg)', color: 'var(--text-dark)', border: '1px solid var(--border)' }}
+          style={{ background: 'var(--bg)', color: 'var(--text-dark) !important', border: '1px solid var(--border)' }}
           title="Productivity Hub"
           data-i18n="nav.hub"
         >

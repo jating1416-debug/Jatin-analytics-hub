@@ -163,6 +163,7 @@ export default function SmartAssistant() {
               style={{ flex: 1, padding: '9px 14px', border: '1px solid var(--border)', borderRadius: 20, background: 'var(--bg)', color: 'var(--text-dark)', outline: 'none', fontSize: '0.85rem' }}
             />
             <button
+              aria-label="Voice input"
               onClick={startVoice}
               title="Voice se pucho (free speech-to-text)"
               style={{

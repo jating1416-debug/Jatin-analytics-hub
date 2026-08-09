@@ -14,6 +14,7 @@ import TryInPlayground from '@/components/TryInPlayground';
 import FocusModeButton from '@/components/FocusModeButton';
 import TldrBox from '@/components/TldrBox';
 import HeadingLinks from '@/components/HeadingLinks';
+import AdSlots from '@/components/AdSlots';
 import { SITE_URL, formatDate, excerptFrom } from '@/lib/utils';
 
 // ARTICLE PAGE v2 - FAST (ISR 60s):
@@ -50,6 +51,7 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
     title,
     description: desc,
     alternates: { canonical: post.canonicalUrl || url },
+    robots: post.noindex ? { index: false, follow: false } : undefined,
     openGraph: { title, description: desc, url, images: image ? [image] : undefined, type: 'article' },
     twitter: { card: 'summary_large_image', title, description: desc, images: image ? [image] : undefined },
   };
@@ -197,6 +199,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
               dangerouslySetInnerHTML={{ __html: post.content }}
             />
 
+            <AdSlots position="article" />
+
             {/* AUTHOR BOX */}
             <div className="author-box" style={{ marginTop: 30 }}>
               <div className="author-box-avatar">👤</div>
@@ -236,11 +240,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
             {/* Share */}
             <div className="share-buttons" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 20, paddingTop: 18, borderTop: '2px solid var(--border)', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-dark)' }}><i className="fas fa-share-alt" /> Share:</span>
-              <a className="share-btn share-whatsapp" style={{ background: '#25D366', color: '#fff', width: 40, height: 40, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} href={`https://wa.me/?text=${encodeURIComponent(post.title + ' ' + url)}`} target="_blank" rel="noopener"><i className="fab fa-whatsapp" /></a>
-              <a className="share-btn share-facebook" style={{ background: '#1877F2', color: '#fff', width: 40, height: 40, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`} target="_blank" rel="noopener"><i className="fab fa-facebook-f" /></a>
-              <a className="share-btn share-twitter" style={{ background: '#000', color: '#fff', width: 40, height: 40, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(post.title)}`} target="_blank" rel="noopener"><i className="fab fa-twitter" /></a>
-              <a className="share-btn share-linkedin" style={{ background: '#0A66C2', color: '#fff', width: 40, height: 40, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`} target="_blank" rel="noopener"><i className="fab fa-linkedin-in" /></a>
-              <a className="share-btn share-telegram" style={{ background: '#229ED9', color: '#fff', width: 40, height: 40, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} href={`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(post.title)}`} target="_blank" rel="noopener"><i className="fab fa-telegram-plane" /></a>
+              <a aria-label="Share on WhatsApp" className="share-btn share-whatsapp" style={{ background: '#25D366', color: '#fff', width: 40, height: 40, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} href={`https://wa.me/?text=${encodeURIComponent(post.title + ' ' + url)}`} target="_blank" rel="noopener"><i className="fab fa-whatsapp" /></a>
+              <a aria-label="Share on Facebook" className="share-btn share-facebook" style={{ background: '#1877F2', color: '#fff', width: 40, height: 40, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`} target="_blank" rel="noopener"><i className="fab fa-facebook-f" /></a>
+              <a aria-label="Share on Twitter" className="share-btn share-twitter" style={{ background: '#000', color: '#fff', width: 40, height: 40, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(post.title)}`} target="_blank" rel="noopener"><i className="fab fa-twitter" /></a>
+              <a aria-label="Share on LinkedIn" className="share-btn share-linkedin" style={{ background: '#0A66C2', color: '#fff', width: 40, height: 40, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`} target="_blank" rel="noopener"><i className="fab fa-linkedin-in" /></a>
+              <a aria-label="Share on Telegram" className="share-btn share-telegram" style={{ background: '#229ED9', color: '#fff', width: 40, height: 40, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} href={`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(post.title)}`} target="_blank" rel="noopener"><i className="fab fa-telegram-plane" /></a>
             </div>
 
             <CommentsSection articleId={post.id} />

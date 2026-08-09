@@ -55,11 +55,11 @@ export default function MobileStickyBar() {
         boxShadow: '0 -4px 18px rgba(0,0,0,0.10)',
       }}
     >
-      <button style={btnStyle} onClick={() => share('wa')} title="Share on WhatsApp"><i className="fab fa-whatsapp" /></button>
-      <button style={btnStyle} onClick={() => share('fb')} title="Share on Facebook"><i className="fab fa-facebook-f" /></button>
-      <button style={btnStyle} onClick={() => share('tg')} title="Share on Telegram"><i className="fab fa-telegram-plane" /></button>
-      <button style={btnStyle} onClick={() => share('copy')} title="Copy link"><i className="fas fa-link" /></button>
-      <button style={{ ...btnStyle, background: 'var(--secondary)' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} title="Back to top">
+      <button aria-label="Share on WhatsApp" style={btnStyle} onClick={() => share('wa')} title="Share on WhatsApp"><i className="fab fa-whatsapp" /></button>
+      <button aria-label="Share on Facebook" style={btnStyle} onClick={() => share('fb')} title="Share on Facebook"><i className="fab fa-facebook-f" /></button>
+      <button aria-label="Share on Telegram" style={btnStyle} onClick={() => share('tg')} title="Share on Telegram"><i className="fab fa-telegram-plane" /></button>
+      <button aria-label="Copy link" style={btnStyle} onClick={() => share('copy')} title="Copy link"><i className="fas fa-link" /></button>
+      <button aria-label="Back to top" style={{ ...btnStyle, background: 'var(--secondary)' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} title="Back to top">
         <i className="fas fa-arrow-up" />
       </button>
     </div>

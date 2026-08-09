@@ -8,7 +8,7 @@ import { formatDate } from '@/lib/utils';
 export const dynamic = 'force-dynamic';
 
 // CDN cache 60s -> sidebar/hot-picks repeat visits pe INSTANT
-const CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' };
+const CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' };
 
 export async function GET() {
   let categories: any[] = [];
