@@ -13,7 +13,7 @@ import AdSlots from '@/components/AdSlots';
 // - Sirf 1 DB query (94 posts ka light select) - 60 sec pe ek baar, phir CDN cache
 // - Hero + tiles + posts sab HTML mein -> FCP/LCP/SI sab fast
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 export default async function HomePage() {
   // SIRF 1 QUERY - saari posts (filters ke liye) - ISR 60s (CDN pe cached)
