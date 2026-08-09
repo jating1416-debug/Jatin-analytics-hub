@@ -76,15 +76,25 @@ const TEXTS: Record<string, Record<string, string>> = {
 export default function LanguageToggle() {
   const [lang, setLang] = useState<'en' | 'hi'>('en');
 
+  // FIX (page-freeze bug): applyLang ke andar textContent SIRF tab set karo
+  // jab value actually badal rahi ho (el.textContent !== t[key]).
+  // Pehle har baar set hota tha -> MutationObserver dobara fire -> INFINITE LOOP
+  // -> browser freeze. Ab guard + applying flag se loop impossible hai.
+  let applying = false;
   const applyLang = (l: 'en' | 'hi') => {
-    document.documentElement.setAttribute('data-lang', l);
-    const t = TEXTS[l];
-    document.querySelectorAll('[data-i18n]').forEach((el) => {
-      const key = el.getAttribute('data-i18n');
-      if (key && t[key] && el.textContent) {
-        el.textContent = t[key];
-      }
-    });
+    applying = true;
+    try {
+      document.documentElement.setAttribute('data-lang', l);
+      const t = TEXTS[l];
+      document.querySelectorAll('[data-i18n]').forEach((el) => {
+        const key = el.getAttribute('data-i18n');
+        if (key && t[key] && el.textContent !== t[key]) {
+          el.textContent = t[key];
+        }
+      });
+    } finally {
+      applying = false;
+    }
   };
 
   useEffect(() => {
@@ -94,8 +104,9 @@ export default function LanguageToggle() {
     setLang(saved);
     applyLang(saved);
 
+    // MutationObserver sirf tab react kare jab hum khud apply NAHI kar rahe ho
     const mo = typeof MutationObserver !== 'undefined'
-      ? new MutationObserver(() => applyLang(saved))
+      ? new MutationObserver(() => { if (!applying) applyLang(saved); })
       : null;
     if (mo) mo.observe(document.body, { childList: true, subtree: true });
     return () => { if (mo) mo.disconnect(); };
