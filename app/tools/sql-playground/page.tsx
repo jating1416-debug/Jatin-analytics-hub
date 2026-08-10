@@ -121,33 +121,58 @@ const FUNCTIONS = [
 ];
 
 // ---------- HIGHLIGHTER ----------
-const KW = 'SELECT|FROM|WHERE|GROUP|BY|ORDER|HAVING|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|ON|AND|OR|NOT|NULL|IS|AS|DISTINCT|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|ALTER|DROP|INDEX|IF|EXISTS|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|DEFAULT|CHECK|UNIQUE|CASE|WHEN|THEN|ELSE|END|LIKE|IN|BETWEEN|UNION|ALL|ASC|DESC|WITH|RECURSIVE|RANK|DENSE_RANK|ROW_NUMBER|OVER|PARTITION|LAG|LEAD|FIRST_VALUE|LAST_VALUE|NTILE|EXISTS|EXPLAIN|ANALYZE|COLLATE|CAST|USING|NATURAL|COUNT|SUM|AVG|MIN|MAX|ROUND|COALESCE|NULLIF|CONCAT|SUBSTR|LENGTH|UPPER|LOWER|TRIM|REPLACE|YEAR|MONTH|DAY|NOW|CURRENT_DATE|CURRENT_TIMESTAMP|strftime';
+const SQL_KW = 'SELECT|FROM|WHERE|GROUP|BY|ORDER|HAVING|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|ON|AND|OR|NOT|NULL|IS|AS|DISTINCT|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|ALTER|DROP|INDEX|IF|EXISTS|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|DEFAULT|CHECK|UNIQUE|CASE|WHEN|THEN|ELSE|END|LIKE|IN|BETWEEN|UNION|ALL|ASC|DESC|WITH|RECURSIVE|OVER|PARTITION|EXPLAIN|ANALYZE|COLLATE|CAST|USING|NATURAL';
+const SQL_FN = 'COUNT|SUM|AVG|MIN|MAX|ROUND|COALESCE|NULLIF|CONCAT|SUBSTR|LENGTH|UPPER|LOWER|TRIM|REPLACE|YEAR|MONTH|DAY|NOW|CURRENT_DATE|CURRENT_TIMESTAMP|strftime|RANK|DENSE_RANK|ROW_NUMBER|LAG|LEAD|FIRST_VALUE|LAST_VALUE|NTILE|ABS|CEIL|FLOOR|MOD|POWER|SQRT';
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 export function highlightSql(sql: string): string {
-  const re = new RegExp(
-    `(--[^\\n]*|\\/\\*[\\s\\S]*?\\*\\/|'[^'\\n]*'|"[^"\\n]*"|\\b\\d+(?:\\.\\d+)?\\b|\\b(?:${KW})\\b|\\b[A-Za-z_][A-Za-z0-9_]*(?=\\())`,
-    'gi'
-  );
-  let out = '';
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(sql)) !== null) {
-    out += esc(sql.slice(last, m.index));
-    const tok = m[0];
-    let cls = 'tok-fn';
-    if (tok.startsWith('--') || tok.startsWith('/*')) cls = 'tok-com';
-    else if (tok.startsWith("'") || tok.startsWith('"')) cls = 'tok-str';
-    else if (/^\d/.test(tok)) cls = 'tok-num';
-    else if (new RegExp(`^(${KW})$`, 'i').test(tok)) cls = 'tok-kw';
-    out += `<span class="${cls}">${esc(tok)}</span>`;
-    last = m.index + tok.length;
+  // VS Code Dark+ tokenizer (same as CodeHighlighter) - inline colors
+  const tokens: { text: string; cls: string }[] = [];
+  let i = 0;
+  const n = sql.length;
+  while (i < n) {
+    const rest = sql.slice(i);
+    let m = rest.match(/^--[^\n]*/);
+    if (m) { tokens.push({ text: m[0], cls: 'tok-com' }); i += m[0].length; continue; }
+    m = rest.match(/^\/\*[\s\S]*?\*\//);
+    if (m) { tokens.push({ text: m[0], cls: 'tok-com' }); i += m[0].length; continue; }
+    m = rest.match(/^'[^'\n]*'/);
+    if (m) { tokens.push({ text: m[0], cls: 'tok-str' }); i += m[0].length; continue; }
+    m = rest.match(/^"[^"\n]*"/);
+    if (m) { tokens.push({ text: m[0], cls: 'tok-str' }); i += m[0].length; continue; }
+    m = rest.match(/^\d+(?:\.\d+)?/);
+    if (m) { tokens.push({ text: m[0], cls: 'tok-num' }); i += m[0].length; continue; }
+    m = rest.match(/^[A-Za-z_][A-Za-z0-9_]*/);
+    if (m) {
+      const word = m[0];
+      const isFn = new RegExp(`^(?:${SQL_FN})$`, 'i').test(word);
+      const isKw = new RegExp(`^(?:${SQL_KW})$`, 'i').test(word);
+      let j = i + word.length;
+      while (j < n && /\s/.test(sql[j])) j++;
+      const followedByParen = sql[j] === '(';
+      if (isFn && followedByParen) tokens.push({ text: word, cls: 'tok-fn' });
+      else if (isKw) tokens.push({ text: word, cls: 'tok-kw' });
+      else if (followedByParen) tokens.push({ text: word, cls: 'tok-fn' });
+      else tokens.push({ text: word, cls: 'tok-idn' });
+      i += word.length;
+      continue;
+    }
+    tokens.push({ text: sql[i], cls: 'tok-plain' });
+    i += 1;
   }
-  out += esc(sql.slice(last));
-  return out;
+  return tokens.map((t) => {
+    if (t.cls === 'tok-plain') return esc(t.text);
+    const colorMap: Record<string, string> = {
+      'tok-kw': '#569CD6', 'tok-fn': '#DCDCAA', 'tok-str': '#CE9178',
+      'tok-num': '#B5CEA8', 'tok-com': '#6A9955', 'tok-idn': '#9CDCFE',
+    };
+    const color = colorMap[t.cls] || '#d4d4d4';
+    const extra = t.cls === 'tok-kw' ? 'font-weight:600;' : t.cls === 'tok-com' ? 'font-style:italic;' : '';
+    return `<span class="${t.cls}" style="color:${color};${extra}">${esc(t.text)}</span>`;
+  }).join('');
 }
 
 type Result = { columns: string[]; values: (string | number | null)[][] };
