@@ -319,7 +319,7 @@ export default function ArticleEditor({
             onChange={(e) => setSeriesId(Number(e.target.value) || null)}
           >
             <option value={0}>— Koi series nahi —</option>
-            {series.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
+            {(series || []).map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
           </select>
         </div>
         <div>

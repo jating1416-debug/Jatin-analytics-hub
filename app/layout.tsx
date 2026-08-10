@@ -15,6 +15,9 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESC,
+  alternates: {
+    canonical: SITE_URL,
+  },
   keywords: [
     'data analytics', 'SQL', 'Python', 'Power BI', 'MySQL', 'Pandas',
     'Excel', 'data analyst career', 'interview questions',

@@ -33,10 +33,13 @@ export function excerptFrom(html: string, max = 220): string {
 }
 
 export function formatDate(d: Date | string): string {
+  // timeZone: 'Asia/Kolkata' - server (UTC) aur browser (IST) ka date kabhi mismatch na ho
+  // (hydration error #418 fix)
   return new Date(d).toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
+    timeZone: 'Asia/Kolkata',
   });
 }
 

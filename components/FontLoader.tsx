@@ -2,12 +2,14 @@
 
 import { useEffect } from 'react';
 
-// FONT LOADER v5 - MOBILE PERFORMANCE FINAL
-// Fonts sirf window 'load' ke BAAD inject hote hain -> FCP/LCP/SI ke dauran
-// network pe koi third-party font nahi -> text system font se turant render.
-// Mobile slow 4G pe: load ~5-6s hota hai -> fonts uske baad (icons thodi der baad)
-// Desktop fast pe: load ~1.5s -> fonts bhi turant (koi visible farak nahi).
-// display=swap -> text kabhi invisible nahi hota.
+// FONT LOADER v6 - LCP FIX + MOBILE FAST
+// Problem: v5 fonts ko window.load ke baad load karta tha -> gradient-clip text
+// (nav-logo, hero) invisible rehta tha jab tak fonts na aayein -> LCP 4.88s!
+// Fix: fonts TURANT async inject (media="print" trick):
+//   - CSS render-block nahi karta (media=print -> non-blocking)
+//   - Fonts background mein load hote hain (mobile pe bhi fast)
+//   - Gradient text jaldi visible -> LCP ~1.5s
+// display=swap -> text kabhi invisible nahi (fallback font se)
 
 const FONTS_URL = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sora:wght@700;800&family=Fira+Code:wght@400&display=swap';
 const FA_URL = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
@@ -35,22 +37,16 @@ export default function FontLoader() {
       document.head.appendChild(style);
     };
 
-    const loadFonts = () => {
-      // Google Fonts turant (load ho chuka hai -> koi competition nahi)
-      inject(FONTS_URL, 'font-gfonts');
-      // Font Awesome thoda aur der (sabse bada 254KB - icons non-critical)
-      setTimeout(() => { inject(FA_URL, 'font-fa'); injectSwap(); }, 400);
-    };
+    // TURANT async inject (non-blocking) - fonts jaldi, render block nahi
+    inject(FONTS_URL, 'font-gfonts');
+    inject(FA_URL, 'font-fa');
+    injectSwap();
 
-    if (document.readyState === 'complete') {
-      loadFonts();
-    } else {
-      window.addEventListener('load', loadFonts, { once: true });
-      // safety: 5s baad bhi load na ho to fonts laao (page kabhi font-less nahi)
-      const safety = setTimeout(loadFonts, 5000);
-      const onLoad = () => clearTimeout(safety);
-      window.addEventListener('load', onLoad, { once: true });
-    }
+    // Safety: agar kuch fail ho to retry
+    setTimeout(() => {
+      inject(FONTS_URL, 'font-gfonts');
+      inject(FA_URL, 'font-fa');
+    }, 3000);
   }, []);
 
   return null;

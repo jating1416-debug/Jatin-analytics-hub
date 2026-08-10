@@ -35,7 +35,7 @@ export default async function ArchivePage() {
   const months: Record<string, typeof articles> = {};
   articles.forEach((a) => {
     const d = new Date(a.publishedAt || a.createdAt);
-    const key = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const key = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
     (months[key] = months[key] || []).push(a);
   });
 

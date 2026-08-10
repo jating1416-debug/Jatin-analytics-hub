@@ -7,14 +7,29 @@ export const dynamic = 'force-dynamic';
 
 export default async function EditArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const article = await prisma.article.findUnique({
-    where: { id: Number(id) },
-    include: { tags: { include: { tag: true } } },
-  });
+
+  // article + categories - graceful error handling (page kabhi crash na ho)
+  let article: Awaited<ReturnType<typeof prisma.article.findUnique>> = null;
+  try {
+    article = await prisma.article.findUnique({
+      where: { id: Number(id) },
+      include: { tags: { include: { tag: true } } },
+    });
+  } catch (e) {
+    console.error('edit article error:', e);
+  }
   if (!article) notFound();
 
-  const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
-  const seriesList = await prisma.articleSeries.findMany({ orderBy: { title: 'asc' } });
+  let categories: { id: number; name: string; slug: string }[] = [];
+  let seriesList: { id: number; title: string }[] = [];
+  try {
+    categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
+  } catch (e) { console.error('categories error:', e); }
+  try {
+    seriesList = await prisma.articleSeries.findMany({ orderBy: { title: 'asc' } });
+  } catch (e) {
+    console.error('series list error (db push pending?):', e);
+  }
 
   return (
     <>

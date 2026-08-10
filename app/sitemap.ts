@@ -11,17 +11,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/downloads`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/author/jatin`, changeFrequency: 'weekly', priority: 0.6 },
     { url: `${SITE_URL}/feed.xml`, changeFrequency: 'daily', priority: 0.3 },
+    { url: `${SITE_URL}/p/about`, changeFrequency: 'yearly', priority: 0.4 },
+    { url: `${SITE_URL}/p/privacy-policy`, changeFrequency: 'yearly', priority: 0.2 },
+    { url: `${SITE_URL}/p/disclaimer`, changeFrequency: 'yearly', priority: 0.2 },
+    { url: `${SITE_URL}/p/terms`, changeFrequency: 'yearly', priority: 0.2 },
+    { url: `${SITE_URL}/p/dmca`, changeFrequency: 'yearly', priority: 0.2 },
   ];
 
   try {
     // SEQUENTIAL (pooler connection_limit=1 ke saath safe)
     const categories = await prisma.category.findMany({ select: { slug: true } });
+    const seriesList = await prisma.articleSeries.findMany({ select: { slug: true } }).catch(() => []);
     const tags = await prisma.tag.findMany({ select: { slug: true } });
     const articles = await prisma.article.findMany({
       where: { status: 'PUBLISHED' },
       select: { slug: true, category: { select: { slug: true } }, updatedAt: true },
       orderBy: { publishedAt: 'desc' },
     });
+
+    const seriesUrls: MetadataRoute.Sitemap = (seriesList as any[]).map((s) => ({
+      url: `${SITE_URL}/series/${s.slug}`,
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    }));
 
     const categoryUrls: MetadataRoute.Sitemap = categories.map((c) => ({
       url: `${SITE_URL}/category/${c.slug}`,
@@ -42,7 +54,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
-    return [...staticUrls, ...categoryUrls, ...tagUrls, ...articleUrls];
+    return [...staticUrls, ...seriesUrls, ...categoryUrls, ...tagUrls, ...articleUrls];
   } catch {
     return staticUrls;
   }

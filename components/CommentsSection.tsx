@@ -59,7 +59,7 @@ export default function CommentsSection({ articleId }: { articleId: number }) {
   };
 
   const fmtDate = (d: string) => {
-    try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+    try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Kolkata' }); }
     catch { return ''; }
   };
 

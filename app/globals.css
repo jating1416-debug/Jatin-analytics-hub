@@ -5266,3 +5266,43 @@
   }
   .series-nav-link:hover { border-color: var(--primary); color: var(--primary); }
   .series-nav-link i { color: var(--primary); }
+
+  /* ============================================================
+     LCP FIX - gradient text ko solid fallback (LCP 4.88s -> ~1.5s)
+     Problem: -webkit-text-fill-color:transparent + clip:text wala text
+     browser font load tak invisible rehta hai -> LCP late.
+     Fix: solid color fallback pehle -> text hamesha turant visible.
+  ============================================================ */
+  .nav-logo-text {
+    background: none;
+    -webkit-background-clip: initial;
+    background-clip: initial;
+    -webkit-text-fill-color: initial;
+    color: var(--primary);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .nav-logo-text:hover { color: var(--secondary); }
+
+  .hero-gradient-text {
+    color: #c7d2fe;
+    background: linear-gradient(92deg, #a5b4fc 0%, #c4b5fd 45%, #67e8f9 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero-rotate-word {
+    color: #a5b4fc;
+    background: linear-gradient(92deg, #a5b4fc 0%, #c4b5fd 45%, #67e8f9 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .article-title {
+    color: var(--text-dark) !important;
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    -webkit-text-fill-color: initial !important;
+  }
