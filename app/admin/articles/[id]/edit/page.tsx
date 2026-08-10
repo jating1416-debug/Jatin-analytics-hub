@@ -14,12 +14,14 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
   if (!article) notFound();
 
   const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
+  const seriesList = await prisma.articleSeries.findMany({ orderBy: { title: 'asc' } });
 
   return (
     <>
       <h2 className="section-title">✏️ Edit: {article.title.slice(0, 40)}...</h2>
       <ArticleEditor
         categories={categories}
+        series={seriesList.map((x) => ({ id: x.id, title: x.title }))}
         articleId={article.id}
         initial={{
           title: article.title,
@@ -34,6 +36,8 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
           featured: article.featured,
           scheduledAt: article.scheduledAt ? new Date(article.scheduledAt.getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : null,
           noindex: article.noindex,
+          seriesId: article.seriesId,
+          seriesOrder: article.seriesOrder,
         }}
       />
       <RevisionList articleId={article.id} />

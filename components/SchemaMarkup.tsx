@@ -1,4 +1,4 @@
-// SEO: JSON-LD schema (BlogPosting + BreadcrumbList + FAQPage)
+// SEO: JSON-LD schema (BlogPosting + BreadcrumbList + FAQPage + Author/Person)
 export default function SchemaMarkup({
   title,
   url,
@@ -22,6 +22,18 @@ export default function SchemaMarkup({
   authorName: string;
   faq?: { q: string; a: string }[];
 }) {
+  const author = {
+    '@type': 'Person',
+    name: authorName,
+    url: 'https://blog.jatinanalytics.co.in/author',
+    sameAs: [
+      'https://jatinanalytics.co.in',
+      'https://linkedin.com/in/jatin-kumar-5a46a720a',
+      'https://github.com/jating1416-debug',
+      'https://kaggle.com/jatinkhandelwal112',
+    ],
+  };
+
   const articleSchema = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
@@ -31,7 +43,7 @@ export default function SchemaMarkup({
     ...(image ? { image } : {}),
     datePublished: (publishedAt || updatedAt).toISOString(),
     dateModified: updatedAt.toISOString(),
-    author: { '@type': 'Person', name: authorName },
+    author,
     publisher: { '@type': 'Organization', name: 'Data Insights', url: 'https://jatinanalytics.co.in' },
   };
 

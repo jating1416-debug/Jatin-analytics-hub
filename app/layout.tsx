@@ -28,6 +28,11 @@ export const metadata: Metadata = {
   },
   twitter: { card: 'summary_large_image', title: `${SITE_NAME} | Data Analytics Blog`, description: SITE_DESC },
   robots: { index: true, follow: true },
+  verification: {
+    // Google Search Console - Vercel env: GOOGLE_SITE_VERIFICATION
+    // (Search Console → Settings → Verification → HTML tag se code lo)
+    google: process.env.GOOGLE_SITE_VERIFICATION || '',
+  },
   icons: {
     icon: '/icon.svg',
     shortcut: '/icon.svg',

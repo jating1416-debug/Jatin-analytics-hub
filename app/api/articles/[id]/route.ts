@@ -89,6 +89,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         status: newStatus,
         ...(body.scheduledAt !== undefined ? { scheduledAt: body.scheduledAt ? new Date(body.scheduledAt) : null } : {}),
         ...(body.noindex !== undefined ? { noindex: !!body.noindex } : {}),
+        ...(body.seriesId !== undefined ? { seriesId: body.seriesId ? Number(body.seriesId) : null } : {}),
+        ...(body.seriesOrder !== undefined ? { seriesOrder: body.seriesOrder ? Number(body.seriesOrder) : null } : {}),
         featured: body.featured !== undefined ? !!body.featured : existing.featured,
         ...(tagConnects ? { tags: { create: tagConnects } } : {}),
         ...(publishNow ? { publishedAt: new Date(), scheduledAt: null } : {}),
@@ -96,6 +98,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     });
     // ISR cache turant clear (category/status change turant dikhe)
     try { revalidatePath('/', 'layout'); } catch (e) { console.error('revalidate:', e); }
+    // GSC - publish/update pe Google sitemap ping (fire & forget)
+    if (article.status === 'PUBLISHED') {
+      try {
+        const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://blog.jatinanalytics.co.in';
+        fetch(`https://www.google.com/ping?sitemap=${encodeURIComponent(SITE + '/sitemap.xml')}`, { method: 'GET' }).catch(() => {});
+      } catch {}
+    }
     return NextResponse.json(article);
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Error' }, { status: 500 });

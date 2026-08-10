@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { rateLimit } from '@/lib/rate-limit';
 import { createAdminSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword } from '@/lib/passwords';
@@ -7,6 +8,10 @@ import { verifyPassword } from '@/lib/passwords';
 // Password check: (1) env ADMIN_PASSWORD  ya  (2) DB admin user ka password (reset ke baad)
 export async function POST(req: NextRequest) {
   try {
+  // RATE LIMIT - 10 login attempts per 10 min per IP (brute force protection)
+  const rl = rateLimit(req, { limit: 10, keyPrefix: 'login' });
+  if (!rl.ok) return NextResponse.json({ error: 'Bahut zyada attempts — 10 min baad try karo' }, { status: 429 });
+
     const body = await req.json();
     const password = String(body?.password || '');
 

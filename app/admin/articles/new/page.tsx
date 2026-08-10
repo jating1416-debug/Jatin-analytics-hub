@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function NewArticlePage() {
   const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
+  const seriesList = await prisma.articleSeries.findMany({ orderBy: { title: 'asc' } });
   return (
     <>
       <h2 className="section-title">✍️ New Article</h2>

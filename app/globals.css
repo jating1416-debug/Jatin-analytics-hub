@@ -5150,3 +5150,119 @@
   .featured-dropdown-toggle, .featured-btn.outline {
     min-height: 48px;
   }
+
+  /* ============================================================
+     SQL PLAYGROUND PRO - tabs, functions, tables, history
+  ============================================================ */
+  .pg-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .pg-tab {
+    background: var(--card-bg); border: 1.5px solid var(--border);
+    color: var(--text-dark); padding: 9px 16px; border-radius: 20px;
+    font-size: 0.8rem; font-weight: 700; cursor: pointer;
+    transition: all 0.2s ease; font-family: inherit;
+  }
+  .pg-tab:hover { border-color: var(--primary); }
+  .pg-tab.active { background: var(--gradient); color: #fff; border-color: transparent; box-shadow: 0 6px 16px -4px rgba(79,70,229,0.5); }
+
+  /* HISTORY */
+  .pg-history {
+    background: var(--gradient-soft);
+    border: 1px solid rgba(79,70,229,0.2);
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 12px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .pg-history-item {
+    background: var(--card-bg); border: 1px solid var(--border);
+    color: var(--text-dark); padding: 8px 12px; border-radius: 8px;
+    font-size: 0.78rem; font-weight: 600; cursor: pointer; text-align: left;
+    font-family: 'Fira Code', monospace;
+  }
+  .pg-history-item:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* FUNCTIONS */
+  .pg-fn { margin-bottom: 14px; }
+  .pg-fn-cat { margin-bottom: 14px; }
+  .pg-fn-cat-title {
+    font-weight: 800; font-size: 0.85rem; color: var(--primary);
+    text-transform: uppercase; letter-spacing: 0.8px;
+    margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .pg-fn-cat-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .pg-fn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+  .pg-fn-item {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 10px;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .pg-fn-name {
+    background: none; border: none; cursor: pointer;
+    color: var(--primary); font-weight: 800; font-size: 0.82rem;
+    text-align: left; font-family: 'Fira Code', monospace; padding: 0;
+  }
+  .pg-fn-name:hover { text-decoration: underline; }
+  .pg-fn-desc { font-size: 0.7rem; color: var(--text-light); }
+  .pg-fn-sql {
+    background: #0e1526; color: #a5b6d9;
+    border-radius: 8px; padding: 8px 10px; margin-top: 4px;
+    font-size: 0.7rem; overflow-x: auto;
+  }
+
+  /* TABLE BROWSER */
+  .pg-table-browser {
+    background: var(--gradient-soft);
+    border: 1px solid rgba(79,70,229,0.18);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .pg-table-item {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px;
+  }
+  .pg-table-name {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-dark); font-weight: 800; font-size: 0.85rem;
+    font-family: 'Fira Code', monospace; padding: 0;
+  }
+  .pg-table-name:hover { color: var(--primary); }
+  .pg-table-desc { font-size: 0.72rem; color: var(--text-light); }
+  .pg-table-hint { font-size: 0.72rem; color: var(--primary); font-weight: 700; }
+
+  /* ============================================================
+     SERIES NAVIGATION (post series - Part 1, 2, 3...)
+  ============================================================ */
+  .series-nav {
+    background: var(--gradient-soft);
+    border: 1px solid rgba(79,70,229,0.2);
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .series-nav-head {
+    font-weight: 800; font-size: 0.9rem; color: var(--text-dark);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  }
+  .series-nav-head i { color: var(--primary); }
+  .series-nav-parts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .series-nav-part {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: var(--card-bg); border: 1.5px solid var(--border);
+    color: var(--text-dark); display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.8rem; text-decoration: none;
+    transition: all 0.2s ease;
+  }
+  .series-nav-part:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-2px); }
+  .series-nav-part.current { background: var(--gradient); color: #fff; border-color: transparent; }
+  .series-nav-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 12px;
+    font-size: 0.78rem; font-weight: 700; color: var(--text-dark);
+    text-decoration: none; max-width: 280px;
+    transition: all 0.2s ease;
+  }
+  .series-nav-link:hover { border-color: var(--primary); color: var(--primary); }
+  .series-nav-link i { color: var(--primary); }

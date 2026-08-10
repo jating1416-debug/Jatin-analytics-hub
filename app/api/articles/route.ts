@@ -87,10 +87,20 @@ export async function POST(req: NextRequest) {
         publishedAt: body.status === 'DRAFT' || body.status === 'SCHEDULED' ? null : new Date(),
         ...(body.scheduledAt ? { scheduledAt: new Date(body.scheduledAt) } : {}),
         ...(body.noindex ? { noindex: !!body.noindex } : {}),
+        ...(body.seriesId ? { seriesId: Number(body.seriesId) } : {}),
+        ...(body.seriesOrder ? { seriesOrder: Number(body.seriesOrder) } : {}),
         featured: !!body.featured,
         tags: { create: tagConnects },
       },
     });
+    // GSC - nayi post publish pe Google/Bing sitemap ping (fire & forget)
+    if (article.status === 'PUBLISHED') {
+      try {
+        const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://blog.jatinanalytics.co.in';
+        fetch(`https://www.google.com/ping?sitemap=${encodeURIComponent(SITE + '/sitemap.xml')}`, { method: 'GET' }).catch(() => {});
+        fetch(`https://www.bing.com/ping?sitemap=${encodeURIComponent(SITE + '/sitemap.xml')}`, { method: 'GET' }).catch(() => {});
+      } catch {}
+    }
     return NextResponse.json(article, { status: 201 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Error' }, { status: 500 });

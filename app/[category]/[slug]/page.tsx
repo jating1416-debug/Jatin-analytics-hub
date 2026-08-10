@@ -134,6 +134,23 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
     });
   } catch (e) { console.error('related error:', e); }
 
+  // SERIES - saare parts + prev/next in series
+  let seriesParts: any[] = [];
+  let seriesPrev: any = null;
+  let seriesNext: any = null;
+  if (post.seriesId) {
+    try {
+      seriesParts = await prisma.article.findMany({
+        where: { status: 'PUBLISHED', seriesId: post.seriesId },
+        include: { category: true },
+        orderBy: [{ seriesOrder: 'asc' }, { publishedAt: 'desc' }],
+      });
+      const idx = seriesParts.findIndex((x: any) => x.id === post.id);
+      if (idx > 0) seriesPrev = seriesParts[idx - 1];
+      if (idx >= 0 && idx < seriesParts.length - 1) seriesNext = seriesParts[idx + 1];
+    } catch (e) { console.error('series parts error:', e); }
+  }
+
   return (
     <>
       <SchemaMarkup
@@ -236,6 +253,39 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
                 </a>
               )}
             </div>
+
+            {/* SERIES NAVIGATION */}
+            {seriesParts.length > 1 && (
+              <div className="series-nav" style={{ marginTop: 24 }}>
+                <div className="series-nav-head">
+                  <i className="fas fa-list-ol" /> Series: {post.series?.title}
+                </div>
+                <div className="series-nav-parts">
+                  {seriesParts.map((sp, i) => (
+                    <a
+                      key={sp.id}
+                      href={`/${sp.category?.slug || 'post'}/${sp.slug}`}
+                      className={`series-nav-part${sp.id === post.id ? ' current' : ''}`}
+                      title={sp.title}
+                    >
+                      {sp.seriesOrder || i + 1}
+                    </a>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+                  {seriesPrev ? (
+                    <a href={`/${seriesPrev.category?.slug || 'post'}/${seriesPrev.slug}`} className="series-nav-link">
+                      <i className="fas fa-arrow-left" /> Part {seriesPrev.seriesOrder}: {seriesPrev.title.slice(0, 40)}
+                    </a>
+                  ) : <span />}
+                  {seriesNext ? (
+                    <a href={`/${seriesNext.category?.slug || 'post'}/${seriesNext.slug}`} className="series-nav-link">
+                      Part {seriesNext.seriesOrder}: {seriesNext.title.slice(0, 40)} <i className="fas fa-arrow-right" />
+                    </a>
+                  ) : <span />}
+                </div>
+              </div>
+            )}
 
             {/* Share */}
             <div className="share-buttons" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 20, paddingTop: 18, borderTop: '2px solid var(--border)', flexWrap: 'wrap' }}>

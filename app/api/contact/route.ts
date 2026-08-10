@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { rateLimit } from '@/lib/rate-limit';
 
 // POST /api/contact { name, email, message } -> Resend se admin ke email pe
 export async function POST(req: NextRequest) {
+  // RATE LIMIT - 5 per 10 min per IP (spam protection)
+  const rl = rateLimit(req, { limit: 5, keyPrefix: 'contact' });
+  if (!rl.ok) return NextResponse.json({ error: 'Bahut zyada requests — 10 min baad try karo' }, { status: 429 });
   try {
     const body = await req.json();
     const name = String(body?.name || '').trim().slice(0, 80);

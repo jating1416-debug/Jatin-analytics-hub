@@ -13,6 +13,7 @@ export default function ArticleEditor({
   articleId,
 }: {
   categories: Category[];
+  series?: { id: number; title: string }[];
   initial?: {
     title: string;
     slug: string;
@@ -26,6 +27,8 @@ export default function ArticleEditor({
     featured: boolean;
     scheduledAt?: string | null;
     noindex?: boolean;
+    seriesId?: number | null;
+    seriesOrder?: number | null;
   };
   articleId?: number;
 }) {
@@ -44,6 +47,8 @@ export default function ArticleEditor({
   const [scheduledAt, setScheduledAt] = useState(initial?.scheduledAt || '');
   const [noindex, setNoindex] = useState(initial?.noindex || false);
   const [autoSaving, setAutoSaving] = useState(false);
+  const [seriesId, setSeriesId] = useState<number | null>(initial?.seriesId || null);
+  const [seriesOrder, setSeriesOrder] = useState<number>(initial?.seriesOrder || 1);
   const lastSavedRef = useRef(JSON.stringify({ title: initial?.title, content: initial?.content }));
   const [mode, setMode] = useState<'write' | 'html' | 'preview'>('write');
   const [saving, setSaving] = useState(false);
@@ -144,6 +149,8 @@ export default function ArticleEditor({
           coverImage, metaDescription, tags, featured,
           scheduledAt: scheduledAt || undefined,
           noindex,
+          seriesId: seriesId || undefined,
+          seriesOrder: seriesOrder || undefined,
         }),
       });
       const data = await res.json();
@@ -302,6 +309,31 @@ export default function ArticleEditor({
           </label>
         </div>
       </div>
+      {/* SERIES (Part 1, Part 2...) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+        <div>
+          <label style={labelStyle}>Series (optional)</label>
+          <select
+            style={inputStyle}
+            value={seriesId || 0}
+            onChange={(e) => setSeriesId(Number(e.target.value) || null)}
+          >
+            <option value={0}>— Koi series nahi —</option>
+            {series.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={labelStyle}>Part Order (1, 2, 3...)</label>
+          <input
+            type="number"
+            min={1}
+            style={inputStyle}
+            value={seriesOrder}
+            onChange={(e) => setSeriesOrder(Number(e.target.value) || 1)}
+          />
+        </div>
+      </div>
+
       {status === 'SCHEDULED' && !scheduledAt && (
         <div style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 700, marginBottom: 10 }}>
           ⚠️ Status SCHEDULED hai — upar date/time bhi choose karo!

@@ -15,6 +15,10 @@ const NAV = [
   { href: '/admin/pages', icon: 'fa-file-lines', label: 'Pages' },
   { href: '/admin/media', icon: 'fa-images', label: 'Media' },
   { href: '/admin/analytics', icon: 'fa-chart-line', label: 'Analytics' },
+  { href: '/admin/health', icon: 'fa-heart-pulse', label: 'Content Health' },
+  { href: '/admin/series', icon: 'fa-link', label: 'Series' },
+  { href: '/admin/alt-text', icon: 'fa-image', label: 'Alt Text' },
+  { href: '/admin/redirects', icon: 'fa-arrow-right-arrow-left', label: 'Redirects' },
   { href: '/admin/settings', icon: 'fa-gear', label: 'Settings' },
 ];
 
