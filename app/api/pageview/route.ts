@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 // - viewCount increment (admin analytics ke liye)
 // - PageView row bhi save (30-din trend chart ke liye)
 // Same browser se ek baar hi count hota hai (client localStorage check karta hai)
+export const maxDuration = 60; // Vercel function limit
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

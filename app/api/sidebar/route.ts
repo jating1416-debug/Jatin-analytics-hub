@@ -14,6 +14,8 @@ const CACHE_MS = 5 * 60 * 1000; // 5 min memory cache
 const TIMEOUT_MS = 15000;       // 15s (pooler slow hone pe bhi data aayega)
 const FALLBACK_MS = 5 * 1000;   // DB fail pe 5s ke liye fallback (jaldi retry)
 
+export const maxDuration = 60;  // Vercel function limit - 504 kabhi nahi
+
 let cache: { data: any; at: number } | null = null;
 
 const FALLBACK = {
@@ -51,12 +53,13 @@ export async function GET() {
   try {
     // SIRF 5 min mein EK BAAR DB hit (memory cache)
     await withTimeout((async () => {
-      // sequential (connection_limit=1 pooler ke saath safe)
+      // 4 queries (pehle 7 thi) - fast + connection contention kam
       categories = await prisma.category.findMany({
         orderBy: { name: 'asc' },
         include: { _count: { select: { articles: true } } },
       });
       totalCategories = categories.length;
+      totalPosts = categories.reduce((sum: number, c: any) => sum + (c._count?.articles || 0), 0);
 
       recent = await prisma.article.findMany({
         where: { status: 'PUBLISHED' },
@@ -78,18 +81,11 @@ export async function GET() {
         orderBy: { publishedAt: 'desc' },
         take: 8,
       });
+      // featured kam ho to recent se fill karo (EXTRA QUERY NAHI - memory mein se)
       if (featured.length < 4) {
         const have = new Set(featured.map((p: any) => p.id));
-        const latest = await prisma.article.findMany({
-          where: { status: 'PUBLISHED' },
-          include: { category: true },
-          orderBy: { publishedAt: 'desc' },
-          take: 8,
-        });
-        latest.forEach((p: any) => { if (!have.has(p.id) && featured.length < 8) { featured.push(p); have.add(p.id); } });
+        recent.forEach((p: any) => { if (!have.has(p.id) && featured.length < 8) { featured.push(p); have.add(p.id); } });
       }
-
-      totalPosts = await prisma.article.count({ where: { status: 'PUBLISHED' } });
     })(), TIMEOUT_MS);
   } catch (e) {
     console.error('sidebar db timeout/error:', e);

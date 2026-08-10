@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 // LIGHTWEIGHT POSTS API - saari summaries EK baar (client-side filter ke liye)
 // ?all=1 -> saari published posts ki summaries (content ke bina)
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Vercel function limit - 504 kabhi nahi
 
 // CDN cache 60s -> PostList repeat visits pe INSTANT
 const CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' };

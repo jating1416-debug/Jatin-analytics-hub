@@ -28,10 +28,12 @@ export async function middleware(req: NextRequest) {
   }
 
   // redirect list - 60s in-memory cache (serverless instance ke andar)
+  // 3s timeout: DB/API slow ho to middleware KABHI page load nahi rokega
   if (!cache || Date.now() - cache.at > 60 * 1000) {
     try {
       const res = await fetch(`${req.nextUrl.origin}/api/redirects`, {
         next: { revalidate: 60 },
+        signal: AbortSignal.timeout(3000),
       });
       const data = await res.json();
       cache = {
