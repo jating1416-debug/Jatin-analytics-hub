@@ -113,9 +113,12 @@ export default function CodeHighlighter() {
         // HIGHLIGHT - inline colors (bulletproof)
         const codeEl = pre.querySelector('code') || pre;
         const raw = codeEl.textContent || '';
-        // sirf tab highlight karo jab content sach mein hai (empty/whitespace = retry)
         if (!raw.trim()) return;
-        if (codeEl.getAttribute('data-raw') === raw) return; // already done for this content
+        // FIX: agar data-raw set hai BUT spans wipe ho gaye (PostProcessor ne
+        // innerHTML replace kiya tha) -> dobara highlight karo
+        const hasRaw = codeEl.getAttribute('data-raw');
+        const hasSpans = codeEl.innerHTML.includes('<span');
+        if (hasRaw === raw && hasSpans) return; // already highlighted, sab sahi
         codeEl.setAttribute('data-raw', raw);
         const lang = detectLang(raw);
         codeEl.innerHTML = highlightCode(raw, lang) || esc(raw);

@@ -10,6 +10,77 @@ export default function PostProcessor({ html }: { html: string }) {
     const body = document.querySelector('.post-body.entry-content');
     if (!body) return;
 
+    // CRITICAL FIX: SIRF EK BAAR process karo (data-processed guard)
+    // Pehle har MutationObserver fire pe innerHTML replace hota tha ->
+    // CodeHighlighter ke colors/copy buttons WIPE ho jaate the ->
+    // white text + race condition + CLS. Ab ek baar hi chalta hai.
+    if (body.getAttribute('data-processed') === '1') return;
+    body.setAttribute('data-processed', '1');
+
+    // ---------- TABLE NORMALIZER (saari posts ki tables auto-fix) ----------
+    // Blogger se aayi tables tedi medi hoti hain (inline border/cellpadding).
+    // FIX v2: 
+    //  1) Pehli row ko <th> SIRF TAB banao jab wo ACTUALLY header ho
+    //     (cells mein <b>/<strong> ho YA text chhota ho). Pehle har table ki
+    //     pehli row th ban jaati thi -> data white-gradient + white text = INVISIBLE!
+    //  2) td/th ke inline style/color attributes bhi hatao taaki humara CSS
+    //     design hamesha jeete (Blogger ka color:white khatam)
+    // SIRF EK BAAR (data-tables-done guard) - loop se bachne ke liye
+    try {
+      if (body.getAttribute('data-tables-done') === '1') return;
+      body.setAttribute('data-tables-done', '1');
+      body.querySelectorAll('table').forEach((tbl) => {
+        // 1. table ke purane inline attributes hatao
+        ['border', 'cellpadding', 'cellspacing', 'width', 'style'].forEach((attr) => tbl.removeAttribute(attr));
+
+        // 2. SAARE td/th ke inline styles hatao (color/background/size)
+        //    -> white text wala Blogger style kabhi nahi jeetega
+        tbl.querySelectorAll('td, th').forEach((cell) => {
+          cell.removeAttribute('style');
+          cell.removeAttribute('width');
+          cell.removeAttribute('height');
+          cell.removeAttribute('bgcolor');
+          cell.removeAttribute('background');
+        });
+
+        // 3. SMART header detection - pehli row ko th SIRF tab banao jab wo header ho
+        const firstRow = tbl.querySelector('tr');
+        let makeHeader = false;
+        if (firstRow && !firstRow.querySelector('th')) {
+          const cells = Array.from(firstRow.querySelectorAll('td'));
+          if (cells.length > 0) {
+            // header-like agar: <b>/<strong> ho, YA sab cells chhote ho (<= 40 chars)
+            const hasBold = cells.some((c) => c.querySelector('b, strong'));
+            const allShort = cells.every((c) => (c.textContent || '').trim().length <= 40);
+            const hasTwoRows = tbl.querySelectorAll('tr').length >= 2;
+            makeHeader = hasBold || (allShort && hasTwoRows);
+          }
+        }
+        if (makeHeader) {
+          firstRow.querySelectorAll('td').forEach((td) => {
+            const th = document.createElement('th');
+            th.innerHTML = td.innerHTML;
+            th.setAttribute('scope', 'col');
+            td.replaceWith(th);
+          });
+        }
+
+        // 4. agar thead nahi hai to banao (sirf agar pehli row header bani hai)
+        if (makeHeader && !tbl.querySelector('thead')) {
+          const tHead = document.createElement('thead');
+          tHead.appendChild(firstRow);
+          tbl.insertBefore(tHead, tbl.firstChild);
+        }
+        // 4. baaki rows ko tbody mein (agar nahi hai)
+        if (!tbl.querySelector('tbody')) {
+          const tBody = document.createElement('tbody');
+          const rows = tbl.querySelectorAll('tr');
+          rows.forEach((r) => tBody.appendChild(r));
+          tbl.appendChild(tBody);
+        }
+      });
+    } catch (e) { console.error('table normalize error:', e); }
+
     // ---------- HEADING ORDER FIX (a11y) ----------
     // Blogger content mein h4 headings h2 ke baad direct aati thin (h3 skip)
     // -> screen readers + Lighthouse "heading order" fail. h4 ko h3 banao.

@@ -5492,3 +5492,44 @@
   /* Blogger ke purane attributes ko sabke liye ignore */
   .post-content-wrapper table[border],
   .entry-content table[border] { border: 1px solid var(--border) !important; }
+  /* ============================================================
+     CLS FIX - footer 0.72 shift (Lighthouse: 5 shifts, CLS 1.58)
+     Karan: Font Awesome icons late load -> footer social buttons
+     size change + font swap -> footer layout khisakta hai.
+     Fix: fixed sizes + min-heights + font-display swap (icons ke
+     liye bhi reserve)
+  ============================================================ */
+  .footer-social a {
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 0.85rem !important;
+    flex-shrink: 0;
+  }
+  .footer-brand-name {
+    min-height: 26px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .footer-desc {
+    min-height: 52px;
+  }
+  .footer-col h3, .footer-col h4 {
+    min-height: 22px;
+  }
+  .footer-bottom {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  .footer-inner > div {
+    min-height: 140px;
+  }
+  /* FA icons ka size fixed - font load hone pe bhi shift nahi */
+  .footer-social a i,
+  .social-link i,
+  .nav-logo-badge i {
+    font-size: inherit;
+    line-height: 1;
+  }
