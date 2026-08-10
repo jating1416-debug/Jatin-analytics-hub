@@ -120,6 +120,11 @@ function detectLang(text: string): 'sql' | 'python' | 'generic' {
 
 export default function CodeHighlighter() {
   useEffect(() => {
+    // DOUBLE-MOUNT GUARD: article page + LazyWidgets dono import karein to
+    // sirf EK instance chale (dusra turant exit - koi duplicate work nahi)
+    if ((window as any).__diCodeHighlighter) return;
+    (window as any).__diCodeHighlighter = true;
+
     let highlightTimer: ReturnType<typeof setTimeout> | null = null;
 
     const apply = () => {
@@ -161,13 +166,17 @@ export default function CodeHighlighter() {
           pre.appendChild(btn);
         }
 
-        // HIGHLIGHT
+        // HIGHLIGHT - BULLETPROOF GUARD (infinite loop fix!)
+        // Pehle wala guard `hasSpans` check karta tha -> generic blocks
+        // (table outputs jaise +----+------+) mein kabhi <span> nahi banta
+        // -> guard hamesha fail -> innerHTML dobara set -> MutationObserver
+        // fire -> FIR SE highlight -> INFINITE LOOP -> page freeze!
+        // Ab SIRF text compare hota hai: text badla nahi = kuch mat karo
+        // (koi DOM write nahi = koi mutation nahi = loop impossible)
         const codeEl = pre.querySelector('code') || pre;
         const raw = codeEl.textContent || '';
         if (!raw.trim()) return;
-        const hasRaw = codeEl.getAttribute('data-raw');
-        const hasSpans = codeEl.innerHTML.includes('<span');
-        if (hasRaw === raw && hasSpans) return;
+        if (codeEl.getAttribute('data-raw') === raw) return;
         codeEl.setAttribute('data-raw', raw);
         const lang = detectLang(raw);
         const html = lang === 'sql' ? highlightSql(raw) : lang === 'python' ? highlightPython(raw) : esc(raw);
@@ -210,6 +219,8 @@ export default function CodeHighlighter() {
       if (mo) mo.disconnect();
       window.removeEventListener('load', apply);
       if (highlightTimer) clearTimeout(highlightTimer);
+      // next page pe phir se chal sake
+      delete (window as any).__diCodeHighlighter;
     };
   }, []);
 
