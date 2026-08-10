@@ -123,10 +123,12 @@ export default function CodeHighlighter() {
     let highlightTimer: ReturnType<typeof setTimeout> | null = null;
 
     const apply = () => {
-      const body = document.querySelector('.post-body.entry-content');
-      if (!body) return;
+      // SAFETY: koi bhi error page ko crash na kare (React 19: effect error = white screen)
+      try {
+        const body = document.querySelector('.post-body.entry-content');
+        if (!body) return;
 
-      body.querySelectorAll('pre').forEach((pre) => {
+        body.querySelectorAll('pre').forEach((pre) => {
         // COPY + THEME TOGGLE buttons (ek baar hi)
         if (!pre.getAttribute('data-copy-done')) {
           pre.setAttribute('data-copy-done', '1');
@@ -171,6 +173,9 @@ export default function CodeHighlighter() {
         const html = lang === 'sql' ? highlightSql(raw) : lang === 'python' ? highlightPython(raw) : esc(raw);
         codeEl.innerHTML = html || esc(raw);
       });
+      } catch (err) {
+        console.error('highlight error (safely ignored):', err);
+      }
     };
 
     const fallbackCopy = (text: string, done: () => void) => {
