@@ -2,17 +2,28 @@
 
 import { useEffect } from 'react';
 
-// CODE SYNTAX HIGHLIGHTING v2 - VS Code-style multi-color!
-// - SQL: keywords purple, strings green, numbers orange, comments gray, functions blue
-// - Python: keywords purple, builtins blue, decorators teal
+// CODE SYNTAX HIGHLIGHTING v3 - BULLETPROOF (white-text fix!)
+// - INLINE style="color:..." har span pe -> CSS version mismatch ho to bhi
+//   colors HAMESHA dikhenge (yehi "sab white" ka asli fix hai)
+// - Retry logic (rAF + 500ms + 1500ms) - content late load ho to bhi highlight
 // - Copy button + dark/light theme toggle har code block pe
-// - MutationObserver -> client-side navigation pe bhi apply hota hai
+// - MutationObserver -> client-side navigation pe bhi apply
 
-const SQL_KW = 'SELECT|FROM|WHERE|GROUP|BY|ORDER|HAVING|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|ON|AND|OR|NOT|NULL|IS|AS|DISTINCT|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|ALTER|DROP|INDEX|IF|EXISTS|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|DEFAULT|CHECK|UNIQUE|CASE|WHEN|THEN|ELSE|END|LIKE|IN|BETWEEN|UNION|ALL|ASC|DESC|WITH|RECURSIVE|RANK|DENSE_RANK|ROW_NUMBER|OVER|PARTITION|LAG|LEAD|FIRST_VALUE|LAST_VALUE|NTILE|EXPLAIN|ANALYZE|COLLATE|CAST|USING|NATURAL|COUNT|SUM|AVG|MIN|MAX|ROUND|COALESCE|NULLIF|CONCAT|SUBSTR|LENGTH|UPPER|LOWER|TRIM|REPLACE|YEAR|MONTH|DAY|NOW|CURRENT_DATE|CURRENT_TIMESTAMP';
+const SQL_KW = 'SELECT|FROM|WHERE|GROUP|BY|ORDER|HAVING|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|ON|AND|OR|NOT|NULL|IS|AS|DISTINCT|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|ALTER|DROP|INDEX|IF|EXISTS|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|DEFAULT|CHECK|UNIQUE|CASE|WHEN|THEN|ELSE|END|LIKE|IN|BETWEEN|UNION|ALL|ASC|DESC|WITH|RECURSIVE|RANK|DENSE_RANK|ROW_NUMBER|OVER|PARTITION|LAG|LEAD|FIRST_VALUE|LAST_VALUE|NTILE|EXPLAIN|ANALYZE|COLLATE|CAST|USING|NATURAL|COUNT|SUM|AVG|MIN|MAX|ROUND|COALESCE|NULLIF|CONCAT|SUBSTR|LENGTH|UPPER|LOWER|TRIM|REPLACE|YEAR|MONTH|DAY|NOW|CURRENT_DATE|CURRENT_TIMESTAMP|strftime';
 
 const PY_KW = 'def|class|import|from|return|if|elif|else|for|while|break|continue|pass|with|as|try|except|finally|raise|lambda|yield|global|nonlocal|None|True|False|and|or|not|in|is|del|assert|async|await|self';
 
 const PY_FN = 'print|len|range|str|int|float|bool|list|dict|set|tuple|sum|min|max|sorted|enumerate|zip|map|filter|type|input|open|abs|round|format|join|split|append|extend|keys|values|items|get|pop|update|replace|strip|lower|upper|unique|groupby|merge|concat|pivot|head|tail|shape|columns|describe|isnull|dropna|fillna|to_csv|read_csv|read_excel|value_counts|apply|iloc|loc|dtypes|astype|rename|sort_values|drop_duplicates|pd|np';
+
+// INLINE COLOR MAP (VS Code Dark+ palette) - CSS classes pe depend NAHI
+const COLORS: Record<string, string> = {
+  'tok-kw': '#c792ea',   // purple - keywords
+  'tok-fn': '#82aaff',   // blue - functions
+  'tok-str': '#a5d6a7',  // green - strings
+  'tok-num': '#f78c6c',  // orange - numbers
+  'tok-com': '#7a8aa5',  // gray - comments
+  'tok-dec': '#f5d67b',  // yellow - decorators
+};
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -42,7 +53,9 @@ function highlightCode(code: string, lang: 'sql' | 'python' | 'generic'): string
     else if (lang === 'python' && new RegExp(`^(${PY_KW})$`).test(tok)) cls = 'tok-kw';
     else if (lang === 'sql' && new RegExp(`^(${SQL_KW})$`, 'i').test(tok)) cls = 'tok-kw';
     else if (lang === 'python' && new RegExp(`^(${PY_FN})$`).test(tok)) cls = 'tok-fn';
-    out += `<span class="${cls}">${esc(tok)}</span>`;
+    // INLINE COLOR - CSS version mismatch ho to bhi ye hi jeetega
+    const color = COLORS[cls] || '#82aaff';
+    out += `<span class="${cls}" style="color:${color};${cls === 'tok-kw' ? 'font-weight:600;' : ''}${cls === 'tok-com' ? 'font-style:italic;' : ''}">${esc(tok)}</span>`;
     last = m.index + tok.length;
   }
   out += esc(code.slice(last));
@@ -59,6 +72,8 @@ function detectLang(text: string): 'sql' | 'python' | 'generic' {
 
 export default function CodeHighlighter() {
   useEffect(() => {
+    let highlightTimer: ReturnType<typeof setTimeout> | null = null;
+
     const apply = () => {
       const body = document.querySelector('.post-body.entry-content');
       if (!body) return;
@@ -84,33 +99,67 @@ export default function CodeHighlighter() {
           btn.style.cssText = 'position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.12);color:#e2e8f0;border:1px solid rgba(255,255,255,0.2);padding:4px 10px;border-radius:6px;font-size:0.72rem;cursor:pointer;z-index:5;font-family:inherit;';
           btn.onclick = () => {
             const code = pre.querySelector('code') || pre;
-            navigator.clipboard.writeText(code.textContent || '').then(() => {
-              btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-              setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 1500);
-            });
+            const text = (code.textContent || '').replace(/\s+$/g, '');
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(text).then(() => {
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 1500);
+              }).catch(() => fallbackCopy(text, btn));
+            } else fallbackCopy(text, btn);
           };
           pre.appendChild(btn);
         }
 
-        // VS CODE-STYLE HIGHLIGHT (text content se, taaki re-run safe ho)
+        // HIGHLIGHT - inline colors (bulletproof)
         const codeEl = pre.querySelector('code') || pre;
-        const raw = codeEl.getAttribute('data-raw') || codeEl.textContent || '';
-        if (!codeEl.getAttribute('data-raw')) {
-          codeEl.setAttribute('data-raw', raw);
-          const lang = detectLang(raw);
-          codeEl.innerHTML = highlightCode(raw, lang) || ' ';
-          codeEl.setAttribute('data-hl-lang', lang);
-        }
+        const raw = codeEl.textContent || '';
+        // sirf tab highlight karo jab content sach mein hai (empty/whitespace = retry)
+        if (!raw.trim()) return;
+        if (codeEl.getAttribute('data-raw') === raw) return; // already done for this content
+        codeEl.setAttribute('data-raw', raw);
+        const lang = detectLang(raw);
+        codeEl.innerHTML = highlightCode(raw, lang) || esc(raw);
       });
     };
 
+    const fallbackCopy = (text: string, btn: HTMLElement) => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 1500);
+      } catch {
+        window.prompt('Copy karo:', text);
+      }
+    };
+
+    // 1) turant
     apply();
-    // client-side navigation pe bhi apply (naya DOM aaye to)
+    // 2) content late load ho to retry (500ms + 1500ms)
+    setTimeout(apply, 500);
+    setTimeout(apply, 1500);
+    // 3) window load pe
+    window.addEventListener('load', apply);
+    // 4) client-side navigation pe (naya DOM)
     const mo = typeof MutationObserver !== 'undefined'
-      ? new MutationObserver(() => apply())
+      ? new MutationObserver(() => {
+          apply();
+          if (highlightTimer) clearTimeout(highlightTimer);
+          highlightTimer = setTimeout(apply, 300);
+        })
       : null;
     if (mo) mo.observe(document.body, { childList: true, subtree: true });
-    return () => { if (mo) mo.disconnect(); };
+    return () => {
+      if (mo) mo.disconnect();
+      window.removeEventListener('load', apply);
+      if (highlightTimer) clearTimeout(highlightTimer);
+    };
   }, []);
 
   return null;

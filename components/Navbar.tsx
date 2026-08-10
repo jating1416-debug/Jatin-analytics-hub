@@ -36,13 +36,13 @@ export default function Navbar() {
     document.body.classList.toggle('dark-mode', next);
   };
 
-  // LIVE SEARCH - type karte hi suggestions (server pe /api/search)
+  // LIVE SEARCH - type karte hi suggestions (Blogger jaisa - rich dropdown)
   const onSearchInput = async (value: string) => {
     setQuery(value);
     const q = value.trim();
     if (q.length < 2) { setSuggestions([]); setShowSuggest(false); return; }
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=8`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=12`);
       if (res.ok) {
         const data = await res.json();
         setSuggestions(data.results || []);
@@ -82,25 +82,42 @@ export default function Navbar() {
             <i className="fas fa-search" />
           </form>
 
-          {/* Live suggestions dropdown */}
+          {/* Live suggestions dropdown - BLOGGER STYLE (title + category chip + date) */}
           {showSuggest && suggestions.length > 0 && (
             <div style={{
               position: 'absolute', top: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
-              width: 'min(420px, 90vw)', background: 'var(--card-bg)', border: '1px solid var(--border)',
+              width: 'min(460px, 92vw)', background: 'var(--card-bg)', border: '1px solid var(--border)',
               borderRadius: 16, boxShadow: '0 18px 45px rgba(2,6,23,0.18)', zIndex: 1000, padding: 8, textAlign: 'left',
             }}>
-              {suggestions.map((s) => (
-                <a
-                  key={s.url}
-                  href={s.url}
-                  style={{ display: 'block', padding: '10px 12px', borderRadius: 10, color: 'var(--text-dark)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600, transition: 'background 0.15s ease' }}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--gradient-soft)'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                >
-                  {s.title}
-                </a>
-              ))}
+              <div style={{ padding: '8px 12px 6px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-light)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                🔍 "{query.trim()}" — {suggestions.length} matching posts
+              </div>
+              <div style={{ maxHeight: '45vh', overflowY: 'auto' }}>
+                {suggestions.map((s: any) => (
+                  <a
+                    key={s.url}
+                    href={s.url}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 10, color: 'var(--text-dark)', textDecoration: 'none', fontSize: '0.83rem', fontWeight: 600, transition: 'background 0.15s ease' }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--gradient-soft)'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                  >
+                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</span>
+                    {s.categoryName && (
+                      <span style={{ background: 'var(--gradient-soft)', color: 'var(--primary)', borderRadius: 10, padding: '1px 8px', fontSize: '0.64rem', fontWeight: 700, flexShrink: 0 }}>
+                        {s.categoryName}
+                      </span>
+                    )}
+                  </a>
+                ))}
+              </div>
+              <a
+                href={`/search?q=${encodeURIComponent(query.trim())}`}
+                onMouseDown={(e) => e.preventDefault()}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 6, padding: '9px 12px', borderRadius: 10, background: 'var(--gradient)', color: '#fff', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 700 }}
+              >
+                View all results <i className="fas fa-arrow-right" />
+              </a>
             </div>
           )}
         </div>

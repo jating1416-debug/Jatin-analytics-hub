@@ -37,8 +37,10 @@ export async function GET(req: NextRequest) {
     const results = articles.map((a) => ({
       title: a.title,
       url: `/${a.category?.slug || 'post'}/${a.slug}`,
+      categoryName: a.category?.name || 'Article',
+      date: a.publishedAt ? new Date(a.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
     }));
-    return NextResponse.json({ results });
+    return NextResponse.json({ results, total: articles.length, query: q });
   } catch {
     return NextResponse.json({ results: [] });
   }

@@ -15,14 +15,19 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   let dbError = false;
   if (q) {
     try {
+    // ADVANCED SEARCH: 3 words tak split - har word title/excerpt/content mein
+    // (same logic jo /api/search mein hai - taaki 3 words likhte hi related saara data aaye)
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 3);
     articles = await prisma.article.findMany({
       where: {
         status: 'PUBLISHED',
-        OR: [
-          { title: { contains: q, mode: 'insensitive' } },
-          { excerpt: { contains: q, mode: 'insensitive' } },
-          { content: { contains: q, mode: 'insensitive' } },
-        ],
+        OR: words.map((w) => ({
+          OR: [
+            { title: { contains: w, mode: 'insensitive' } },
+            { excerpt: { contains: w, mode: 'insensitive' } },
+            { content: { contains: w, mode: 'insensitive' } },
+          ],
+        })),
       },
       include: { category: true, author: { select: { name: true } } },
       orderBy: { publishedAt: 'desc' },
