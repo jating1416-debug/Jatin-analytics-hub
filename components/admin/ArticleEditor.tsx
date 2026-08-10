@@ -11,6 +11,7 @@ export default function ArticleEditor({
   categories,
   initial,
   articleId,
+  series,
 }: {
   categories: Category[];
   series?: { id: number; title: string }[];

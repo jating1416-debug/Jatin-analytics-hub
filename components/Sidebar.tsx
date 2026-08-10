@@ -97,7 +97,13 @@ export default function Sidebar({
       {w('randomSaved') && (
       <div className="sidebar-widget" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button
-          onClick={() => { window.location.href = '/api/random-article'; }}
+          onClick={async () => {
+            try {
+              const res = await fetch('/api/random-article');
+              const data = await res.json();
+              if (data.url) window.location.href = data.url;
+            } catch { window.location.href = '/'; }
+          }}
           style={{ flex: 1, background: 'var(--gradient)', color: '#fff', border: 'none', padding: '10px', borderRadius: 10, fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}
         >
           🎲 Random Article

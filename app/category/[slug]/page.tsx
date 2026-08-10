@@ -62,6 +62,12 @@ export default async function CategoryPage({ params, searchParams }: { params: P
   return (
     <div className="layout-wrapper">
       <main className="posts-section">
+        {/* BREADCRUMB - SEO + user navigation */}
+        <div className="breadcrumb" style={{ marginBottom: 18 }}>
+          <a href="/" style={{ color: 'var(--primary)' }}><i className="fas fa-home" style={{ marginRight: 5 }} />Home</a>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-current">{label}</span>
+        </div>
         <h2 className="section-title">📁 {label} — {total} Posts</h2>
         {dbError ? (
           <div className="category-empty" style={{ display: 'block' }}>

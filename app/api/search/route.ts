@@ -6,18 +6,24 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get('q') || '').trim();
-  const limit = Math.min(10, parseInt(req.nextUrl.searchParams.get('limit') || '5', 10) || 5);
+  const limit = Math.min(10, parseInt(req.nextUrl.searchParams.get('limit') || '8', 10) || 8);
   if (q.length < 2) return NextResponse.json({ results: [] });
+
+  // ADVANCED: 3 words tak partial match - har word alag se match + content bhi
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 3);
+  const containsAny = {
+    OR: words.map((w) => ({
+      OR: [
+        { title: { contains: w, mode: 'insensitive' } },
+        { excerpt: { contains: w, mode: 'insensitive' } },
+        { content: { contains: w, mode: 'insensitive' } },
+      ],
+    })),
+  };
 
   try {
     const articles = await prisma.article.findMany({
-      where: {
-        status: 'PUBLISHED',
-        OR: [
-          { title: { contains: q, mode: 'insensitive' } },
-          { excerpt: { contains: q, mode: 'insensitive' } },
-        ],
-      },
+      where: { status: 'PUBLISHED', ...containsAny },
       include: { category: true },
       orderBy: { publishedAt: 'desc' },
       take: limit,

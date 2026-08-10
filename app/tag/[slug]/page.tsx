@@ -56,6 +56,14 @@ export default async function TagPage({ params, searchParams }: { params: Promis
   return (
     <div className="layout-wrapper">
       <main className="posts-section">
+        {/* BREADCRUMB - SEO + user navigation */}
+        <div className="breadcrumb" style={{ marginBottom: 18 }}>
+          <a href="/" style={{ color: 'var(--primary)' }}><i className="fas fa-home" style={{ marginRight: 5 }} />Home</a>
+          <span className="breadcrumb-sep">/</span>
+          <a href="/search" style={{ color: 'var(--primary)' }}>Tags</a>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-current">{slug}</span>
+        </div>
         <h2 className="section-title">🏷️ Tag: {slug} — {total} Posts</h2>
         {articles.length === 0 ? (
           <div className="category-empty" style={{ display: 'block' }}>

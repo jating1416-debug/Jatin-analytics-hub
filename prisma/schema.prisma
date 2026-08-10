@@ -70,6 +70,9 @@ model Article {
   updatedAt       DateTime     @updatedAt
   comments        Comment[]
   revisions       ArticleRevision[]
+  series          ArticleSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  seriesId        Int?
+  seriesOrder     Int?
 
   @@index([slug])
   @@index([categoryId, status, publishedAt])
@@ -200,4 +203,13 @@ model ArticleRevision {
   createdAt DateTime @default(now())
 
   @@index([articleId])
+}
+
+model ArticleSeries {
+  id          Int       @id @default(autoincrement())
+  title       String
+  slug        String    @unique
+  description String?
+  articles    Article[]
+  createdAt   DateTime  @default(now())
 }

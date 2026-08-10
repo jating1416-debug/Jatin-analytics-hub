@@ -14,6 +14,9 @@ export default function TryInPlayground() {
       const text = code.textContent || '';
       // sirf SQL-looking blocks pe button
       if (!/SELECT|INSERT|UPDATE|DELETE|CREATE|WITH|FROM|JOIN/i.test(text)) return;
+      // STRICT SQL check - Excel/formula blocks pe button NAHI (excel query galat SQL pe nahi jayegi)
+      const excelLike = /(VLOOKUP|XLOOKUP|INDEX|MATCH|SUMIF|COUNTIF|IFERROR|PIVOT|Excel|formula|Format|FORMAT)/i;
+      if (excelLike.test(text)) return;
 
       const pre = code.closest('pre');
       if (!pre) return;

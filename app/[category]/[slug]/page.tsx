@@ -23,7 +23,7 @@ import { SITE_URL, formatDate, excerptFrom } from '@/lib/utils';
 // - Views SIRF client (ViewCounter) se count hote hain - server pe double count nahi
 // - 60 sec CDN cache -> repeat visits INSTANT
 
-export const revalidate = 60;
+export const revalidate = 300; // 5 min cache - post fast kholo
 
 const getPost = cache(async (slug: string) => {
   return prisma.article.findUnique({

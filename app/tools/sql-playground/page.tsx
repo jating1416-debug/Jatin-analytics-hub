@@ -23,33 +23,33 @@ const ENGINE_SOURCES = [
 
 // ---------- 7 TABLES + DATA ----------
 const SETUP = [
-  // 1. departments
-  "CREATE TABLE IF NOT EXISTS departments (id INTEGER PRIMARY KEY, dept_name TEXT, location TEXT, budget REAL);",
-  "INSERT INTO departments VALUES (1,'Sales','Mumbai',500000),(2,'Engineering','Bangalore',1200000),(3,'HR','Delhi',200000),(4,'Marketing','Pune',300000),(5,'Finance','Mumbai',800000);",
+  // 1. departments - 9 columns
+  "CREATE TABLE IF NOT EXISTS departments (id INTEGER PRIMARY KEY, dept_name TEXT, location TEXT, budget REAL, head_name TEXT, founded_year INTEGER, employee_count INTEGER, avg_salary REAL, rating REAL);",
+  "INSERT INTO departments VALUES (1,'Sales','Mumbai',500000,'Rajesh Malhotra',2012,45,62000,4.5),(2,'Engineering','Bangalore',1200000,'Anita Desai',2010,120,88000,4.8),(3,'HR','Delhi',200000,'Suresh Gupta',2015,15,54000,4.0),(4,'Marketing','Pune',300000,'Neha Singh',2016,25,58000,4.2),(5,'Finance','Mumbai',800000,'Vikram Joshi',2011,30,75000,4.6);",
 
-  // 2. employees (15 rows)
-  "CREATE TABLE IF NOT EXISTS employees (id INTEGER PRIMARY KEY, name TEXT, department TEXT, salary REAL, hire_date TEXT, city TEXT, age INTEGER, rating REAL);",
-  "INSERT INTO employees VALUES (1,'Amit Sharma','Sales',65000,'2021-03-15','Mumbai',28,4.5),(2,'Priya Patel','Engineering',82000,'2020-06-01','Bangalore',30,4.8),(3,'Rahul Verma','Sales',72000,'2022-01-10','Delhi',32,4.2),(4,'Sneha Iyer','Marketing',58000,'2021-09-20','Pune',26,3.9),(5,'Vikram Singh','Engineering',95000,'2019-04-11','Bangalore',35,4.9),(6,'Anjali Gupta','HR',54000,'2023-02-14','Delhi',27,4.0),(7,'Rohit Kumar','Sales',61000,'2020-11-30','Mumbai',29,3.7),(8,'Kavita Nair','Marketing',56000,'2022-07-05','Pune',31,4.1),(9,'Arjun Mehta','Engineering',78000,'2021-12-01','Bangalore',33,4.4),(10,'Pooja Joshi','HR',52000,'2023-08-19','Delhi',25,3.6),(11,'Sanjay Rao','Finance',88000,'2018-05-21','Mumbai',38,4.7),(12,'Neha Kapoor','Finance',67000,'2020-09-14','Mumbai',29,4.3),(13,'Ravi Kumar','Engineering',105000,'2017-03-30','Bangalore',40,5.0),(14,'Meera Pillai','Sales',59000,'2022-11-08','Chennai',27,3.8),(15,'Deepak Chawla','Marketing',62000,'2019-08-25','Delhi',34,4.2);",
+  // 2. employees - 12 columns (id, name, department, salary, hire_date, city, age, rating, email, gender, experience_years, bonus)
+  "CREATE TABLE IF NOT EXISTS employees (id INTEGER PRIMARY KEY, name TEXT, department TEXT, salary REAL, hire_date TEXT, city TEXT, age INTEGER, rating REAL, email TEXT, gender TEXT, experience_years INTEGER, bonus REAL);",
+  "INSERT INTO employees VALUES (1,'Amit Sharma','Sales',65000,'2021-03-15','Mumbai',28,4.5,'amit.sharma@gmail.com','M',4,12000),(2,'Priya Patel','Engineering',82000,'2020-06-01','Bangalore',30,4.8,'priya.patel@gmail.com','F',5,20000),(3,'Rahul Verma','Sales',72000,'2022-01-10','Delhi',32,4.2,'rahul.verma@gmail.com','M',3,9000),(4,'Sneha Iyer','Marketing',58000,'2021-09-20','Pune',26,3.9,'sneha.iyer@gmail.com','F',4,7000),(5,'Vikram Singh','Engineering',95000,'2019-04-11','Bangalore',35,4.9,'vikram.singh@gmail.com','M',6,25000),(6,'Anjali Gupta','HR',54000,'2023-02-14','Delhi',27,4.0,'anjali.gupta@gmail.com','F',2,5000),(7,'Rohit Kumar','Sales',61000,'2020-11-30','Mumbai',29,3.7,'rohit.kumar@gmail.com','M',4,8000),(8,'Kavita Nair','Marketing',56000,'2022-07-05','Pune',31,4.1,'kavita.nair@gmail.com','F',3,6000),(9,'Arjun Mehta','Engineering',78000,'2021-12-01','Bangalore',33,4.4,'arjun.mehta@gmail.com','M',4,15000),(10,'Pooja Joshi','HR',52000,'2023-08-19','Delhi',25,3.6,'pooja.joshi@gmail.com','F',2,4000),(11,'Sanjay Rao','Finance',88000,'2018-05-21','Mumbai',38,4.7,'sanjay.rao@gmail.com','M',7,22000),(12,'Neha Kapoor','Finance',67000,'2020-09-14','Mumbai',29,4.3,'neha.kapoor@gmail.com','F',5,14000),(13,'Ravi Kumar','Engineering',105000,'2017-03-30','Bangalore',40,5.0,'ravi.kumar@gmail.com','M',8,30000),(14,'Meera Pillai','Sales',59000,'2022-11-08','Chennai',27,3.8,'meera.pillai@gmail.com','F',3,7000),(15,'Deepak Chawla','Marketing',62000,'2019-08-25','Delhi',34,4.2,'deepak.chawla@gmail.com','M',6,10000),(16,'Farhan Ali','Finance',72000,'2021-01-19','Mumbai',31,4.4,'farhan.ali@gmail.com','M',4,13000),(17,'Ishita Bose','Engineering',86000,'2020-03-11','Kolkata',29,4.6,'ishita.bose@gmail.com','F',5,18000),(18,'Karan Mehta','Sales',68000,'2022-06-27','Delhi',30,4.1,'karan.mehta@gmail.com','M',3,9500);",
 
-  // 3. sales (15 rows)
-  "CREATE TABLE IF NOT EXISTS sales (id INTEGER PRIMARY KEY, product TEXT, category TEXT, amount REAL, region TEXT, sale_date TEXT, quantity INTEGER);",
-  "INSERT INTO sales VALUES (1,'Laptop','Electronics',75000,'North','2025-01-10',1),(2,'Phone','Electronics',45000,'South','2025-01-12',2),(3,'Chair','Furniture',12000,'North','2025-01-15',4),(4,'Table','Furniture',25000,'East','2025-02-01',2),(5,'Monitor','Electronics',18000,'West','2025-02-03',3),(6,'Desk','Furniture',32000,'South','2025-02-10',1),(7,'Keyboard','Electronics',5000,'North','2025-02-12',5),(8,'Mouse','Electronics',1500,'East','2025-02-15',10),(9,'Bookshelf','Furniture',22000,'West','2025-03-01',2),(10,'Printer','Electronics',28000,'South','2025-03-05',1),(11,'Laptop','Electronics',78000,'West','2025-03-12',1),(12,'Phone','Electronics',46000,'North','2025-03-18',2),(13,'Chair','Furniture',13000,'South','2025-04-02',3),(14,'Monitor','Electronics',19000,'East','2025-04-08',2),(15,'Desk','Furniture',33000,'North','2025-04-15',1);",
+  // 3. sales - 10 columns (id, product, category, amount, region, sale_date, quantity, discount, profit, payment_method)
+  "CREATE TABLE IF NOT EXISTS sales (id INTEGER PRIMARY KEY, product TEXT, category TEXT, amount REAL, region TEXT, sale_date TEXT, quantity INTEGER, discount REAL, profit REAL, payment_method TEXT);",
+  "INSERT INTO sales VALUES (1,'Laptop','Electronics',75000,'North','2025-01-10',1,5,15000,'UPI'),(2,'Phone','Electronics',45000,'South','2025-01-12',2,10,9000,'Card'),(3,'Chair','Furniture',12000,'North','2025-01-15',4,0,3600,'Cash'),(4,'Table','Furniture',25000,'East','2025-02-01',2,8,5000,'UPI'),(5,'Monitor','Electronics',18000,'West','2025-02-03',3,15,3600,'Card'),(6,'Desk','Furniture',32000,'South','2025-02-10',1,5,8000,'Card'),(7,'Keyboard','Electronics',5000,'North','2025-02-12',5,10,1500,'UPI'),(8,'Mouse','Electronics',1500,'East','2025-02-15',10,0,600,'Cash'),(9,'Bookshelf','Furniture',22000,'West','2025-03-01',2,10,5500,'UPI'),(10,'Printer','Electronics',28000,'South','2025-03-05',1,5,7000,'Card'),(11,'Laptop','Electronics',78000,'West','2025-03-12',1,8,16000,'Card'),(12,'Phone','Electronics',46000,'North','2025-03-18',2,12,9200,'UPI'),(13,'Chair','Furniture',13000,'South','2025-04-02',3,5,3900,'Cash'),(14,'Monitor','Electronics',19000,'East','2025-04-08',2,10,3800,'UPI'),(15,'Desk','Furniture',33000,'North','2025-04-15',1,0,8250,'Card'),(16,'Keyboard','Electronics',5200,'West','2025-04-22',4,8,1560,'UPI'),(17,'Phone','Electronics',47000,'East','2025-05-05',1,5,9400,'Card'),(18,'Table','Furniture',26000,'North','2025-05-18',1,10,5200,'Cash');",
 
-  // 4. products
-  "CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY, name TEXT, category TEXT, price REAL, stock INTEGER);",
-  "INSERT INTO products VALUES (1,'Laptop Pro','Electronics',78000,25),(2,'Smartphone X','Electronics',46000,60),(3,'Office Chair','Furniture',13000,40),(4,'Standing Desk','Furniture',33000,15),(5,'4K Monitor','Electronics',19000,35),(6,'Mechanical Keyboard','Electronics',5000,80),(7,'Wireless Mouse','Electronics',1500,120),(8,'Bookshelf','Furniture',22000,20);",
+  // 4. products - 9 columns (id, name, category, price, stock, brand, rating, weight_kg, supplier)
+  "CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY, name TEXT, category TEXT, price REAL, stock INTEGER, brand TEXT, rating REAL, weight_kg REAL, supplier TEXT);",
+  "INSERT INTO products VALUES (1,'Laptop Pro','Electronics',78000,25,'Dell',4.6,1.8,'TechDist'),(2,'Smartphone X','Electronics',46000,60,'Samsung',4.4,0.2,'MobileHub'),(3,'Office Chair','Furniture',13000,40,'UrbanSeat',4.2,8.5,'FurniWorld'),(4,'Standing Desk','Furniture',33000,15,'WorkWell',4.5,22,'FurniWorld'),(5,'4K Monitor','Electronics',19000,35,'LG',4.7,5.2,'TechDist'),(6,'Mechanical Keyboard','Electronics',5000,80,'Logitech',4.5,0.9,'MobileHub'),(7,'Wireless Mouse','Electronics',1500,120,'Logitech',4.3,0.1,'MobileHub'),(8,'Bookshelf','Furniture',22000,20,'WoodCraft',4.1,30,'FurniWorld'),(9,'Smartwatch','Electronics',22000,45,'Apple',4.8,0.05,'MobileHub'),(10,'Gaming Laptop','Electronics',110000,12,'Asus',4.7,2.4,'TechDist'),(11,'Conference Table','Furniture',45000,8,'WorkWell',4.4,45,'FurniWorld'),(12,'Printer','Electronics',28000,18,'HP',4.2,7.5,'TechDist');",
 
-  // 5. customers
-  "CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT, join_date TEXT, tier TEXT);",
-  "INSERT INTO customers VALUES (1,'Rajesh Kumar','Mumbai','2020-01-15','Gold'),(2,'Sunita Rao','Delhi','2021-03-22','Silver'),(3,'Amit Verma','Bangalore','2019-07-10','Gold'),(4,'Farah Khan','Pune','2022-05-30','Bronze'),(5,'Karan Singh','Chennai','2020-11-05','Silver'),(6,'Divya Menon','Mumbai','2023-02-14','Bronze'),(7,'Rohit Jain','Delhi','2021-09-18','Gold');",
+  // 5. customers - 9 columns (id, name, city, join_date, tier, email, phone, age, gender)
+  "CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT, join_date TEXT, tier TEXT, email TEXT, phone TEXT, age INTEGER, gender TEXT);",
+  "INSERT INTO customers VALUES (1,'Rajesh Kumar','Mumbai','2020-01-15','Gold','rajesh.k@gmail.com','9820012345',35,'M'),(2,'Sunita Rao','Delhi','2021-03-22','Silver','sunita.rao@gmail.com','9811122233',42,'F'),(3,'Amit Verma','Bangalore','2019-07-10','Gold','amit.v@gmail.com','9900112233',38,'M'),(4,'Farah Khan','Pune','2022-05-30','Bronze','farah.k@gmail.com','9765432100',29,'F'),(5,'Karan Singh','Chennai','2020-11-05','Silver','karan.s@gmail.com','9888776655',45,'M'),(6,'Divya Menon','Mumbai','2023-02-14','Bronze','divya.m@gmail.com','9966778899',26,'F'),(7,'Rohit Jain','Delhi','2021-09-18','Gold','rohit.j@gmail.com','9800012345',33,'M'),(8,'Sneha Reddy','Hyderabad','2022-08-12','Silver','sneha.r@gmail.com','9745566778',31,'F'),(9,'Arun Nair','Kochi','2023-06-20','Bronze','arun.n@gmail.com','9622334455',27,'M'),(10,'Pooja Shah','Ahmedabad','2020-04-05','Gold','pooja.s@gmail.com','9955443322',36,'F');",
 
-  // 6. orders
-  "CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY, customer_id INTEGER, product_id INTEGER, quantity INTEGER, order_date TEXT, status TEXT);",
-  "INSERT INTO orders VALUES (1,1,1,1,'2025-01-10','Delivered'),(2,2,2,2,'2025-01-12','Delivered'),(3,3,3,4,'2025-01-15','Shipped'),(4,4,4,2,'2025-02-01','Delivered'),(5,5,5,3,'2025-02-03','Pending'),(6,6,6,5,'2025-02-10','Delivered'),(7,7,7,10,'2025-02-12','Shipped'),(8,1,8,2,'2025-02-15','Delivered'),(9,2,1,1,'2025-03-01','Cancelled'),(10,3,2,2,'2025-03-05','Delivered');",
+  // 6. orders - 9 columns (id, customer_id, product_id, quantity, order_date, status, total_price, discount, payment_method)
+  "CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY, customer_id INTEGER, product_id INTEGER, quantity INTEGER, order_date TEXT, status TEXT, total_price REAL, discount REAL, payment_method TEXT);",
+  "INSERT INTO orders VALUES (1,1,1,1,'2025-01-10','Delivered',78000,5,'UPI'),(2,2,2,2,'2025-01-12','Delivered',92000,10,'Card'),(3,3,3,4,'2025-01-15','Shipped',52000,0,'Cash'),(4,4,4,2,'2025-02-01','Delivered',66000,8,'UPI'),(5,5,5,3,'2025-02-03','Pending',57000,15,'Card'),(6,6,6,5,'2025-02-10','Delivered',25000,10,'Card'),(7,7,7,10,'2025-02-12','Shipped',15000,0,'UPI'),(8,1,8,2,'2025-02-15','Delivered',44000,10,'UPI'),(9,2,1,1,'2025-03-01','Cancelled',78000,5,'Card'),(10,3,2,2,'2025-03-05','Delivered',92000,10,'UPI'),(11,4,9,1,'2025-03-12','Delivered',22000,0,'Card'),(12,5,10,1,'2025-03-18','Shipped',110000,8,'Card'),(13,6,3,3,'2025-04-02','Delivered',39000,5,'Cash'),(14,7,5,2,'2025-04-08','Pending',38000,10,'UPI'),(15,8,4,1,'2025-04-15','Delivered',33000,0,'Card'),(16,9,12,1,'2025-04-22','Delivered',28000,5,'UPI'),(17,10,2,1,'2025-05-05','Shipped',46000,5,'Card'),(18,1,3,1,'2025-05-18','Delivered',13000,0,'Cash');",
 
-  // 7. student_scores
-  "CREATE TABLE IF NOT EXISTS student_scores (id INTEGER PRIMARY KEY, name TEXT, subject TEXT, score INTEGER);",
-  "INSERT INTO student_scores VALUES (1,'Aarav','Math',85),(2,'Aarav','Science',78),(3,'Aarav','English',92),(4,'Diya','Math',95),(5,'Diya','Science',88),(6,'Diya','English',90),(7,'Kabir','Math',72),(8,'Kabir','Science',85),(9,'Kabir','English',76),(10,'Isha','Math',88),(11,'Isha','Science',94),(12,'Isha','English',81);",
+  // 7. student_scores - 7 columns (id, name, subject, score, class, term, attempts)
+  "CREATE TABLE IF NOT EXISTS student_scores (id INTEGER PRIMARY KEY, name TEXT, subject TEXT, score INTEGER, class TEXT, term TEXT, attempts INTEGER);",
+  "INSERT INTO student_scores VALUES (1,'Aarav','Math',85,'10A','Term 1',1),(2,'Aarav','Science',78,'10A','Term 1',1),(3,'Aarav','English',92,'10A','Term 1',1),(4,'Diya','Math',95,'10B','Term 1',1),(5,'Diya','Science',88,'10B','Term 1',1),(6,'Diya','English',90,'10B','Term 1',1),(7,'Kabir','Math',72,'10A','Term 1',2),(8,'Kabir','Science',85,'10A','Term 1',1),(9,'Kabir','English',76,'10A','Term 1',1),(10,'Isha','Math',88,'10B','Term 1',1),(11,'Isha','Science',94,'10B','Term 1',1),(12,'Isha','English',81,'10B','Term 1',1),(13,'Aarav','Math',88,'10A','Term 2',1),(14,'Diya','Science',92,'10B','Term 2',1),(15,'Kabir','English',80,'10A','Term 2',2);",
 ];
 
 // ---------- 20 SAMPLE QUERIES ----------
@@ -74,6 +74,15 @@ const SAMPLES = [
   { label: '⭐ Top rated employees', sql: 'SELECT name, department, salary, rating FROM employees WHERE rating >= 4.5 ORDER BY rating DESC;' },
   { label: '🔄 UNION (all names)', sql: "SELECT name FROM employees UNION SELECT name FROM customers ORDER BY name;" },
   { label: '🎯 Sales vs quantity', sql: 'SELECT category, COUNT(*) AS sales_count, SUM(quantity) AS units_sold, ROUND(AVG(amount/quantity),2) AS avg_unit_price FROM sales GROUP BY category;' },
+  { label: '💵 Profit by region', sql: 'SELECT region, ROUND(SUM(profit),0) AS total_profit, ROUND(AVG(discount),1) AS avg_discount FROM sales GROUP BY region ORDER BY total_profit DESC;' },
+  { label: '👥 Employees by gender', sql: 'SELECT gender, COUNT(*) AS emp_count, ROUND(AVG(salary),0) AS avg_salary FROM employees GROUP BY gender;' },
+  { label: '📧 Email domain count', sql: "SELECT SUBSTR(email, INSTR(email,'@')+1) AS domain, COUNT(*) AS cnt FROM employees GROUP BY domain ORDER BY cnt DESC;" },
+  { label: '⭐ Top rated products', sql: 'SELECT name, brand, price, rating, stock FROM products WHERE rating >= 4.5 ORDER BY rating DESC;' },
+  { label: '🏷️ Customer tier analysis', sql: 'SELECT tier, COUNT(*) AS customers, ROUND(AVG(age),0) AS avg_age FROM customers GROUP BY tier ORDER BY customers DESC;' },
+  { label: '💳 Payment method split', sql: "SELECT payment_method, COUNT(*) AS orders, ROUND(SUM(total_price),0) AS revenue FROM orders GROUP BY payment_method ORDER BY revenue DESC;" },
+  { label: '🎓 Term comparison', sql: "SELECT subject, term, ROUND(AVG(score),1) AS avg_score FROM student_scores GROUP BY subject, term ORDER BY subject, term;" },
+  { label: '🏢 Dept by avg salary', sql: 'SELECT d.dept_name, d.location, d.employee_count, d.avg_salary, d.rating FROM departments d ORDER BY d.avg_salary DESC;' },
+  { label: '📊 Bonus analysis', sql: 'SELECT department, ROUND(SUM(bonus),0) AS total_bonus, ROUND(AVG(bonus),0) AS avg_bonus FROM employees GROUP BY department ORDER BY total_bonus DESC;' },
 ];
 
 // ---------- SQL FUNCTION REFERENCE (formulas!) ----------
@@ -263,11 +272,45 @@ export default function SqlPlayground() {
   };
 
   const copySql = async () => {
+    // COPY with fallback (sirf navigator.clipboard bharosa nahi - mobile/safari pe fail hota hai)
     try {
       await navigator.clipboard.writeText(sql);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch {}
+    } catch {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = sql;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      } catch {
+        window.prompt('Copy karo:', sql);
+      }
+    }
+  };
+
+  // SQL FORMATTER - query ko readable banata hai (SQL formatter jaisa)
+  const formatSql = (input: string) => {
+    let q = input.replace(/;\s*$/, '');
+    // keywords ke baad newline
+    q = q
+      .replace(/\b(SELECT|FROM|WHERE|GROUP BY|ORDER BY|HAVING|JOIN|INNER JOIN|LEFT JOIN|RIGHT JOIN|FULL JOIN|CROSS JOIN|ON|AND|OR|UNION|INSERT INTO|VALUES|UPDATE|SET|DELETE FROM|CREATE TABLE|WITH|LIMIT|OFFSET)\b/gi, '\n$1')
+      // commas ke baad newline (SELECT columns ke liye)
+      .replace(/(SELECT[\s\S]*?)(,)(?=\s*[A-Za-z_])/gi, '$1,')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .join('\n')
+      .replace(/,/g, ',\n  ')
+      .replace(/\n\s*\n/g, '\n');
+    // SELECT ke baad columns indent + FROM align
+    return q.trim() + ';';
   };
 
   const exportCsv = () => {
@@ -327,6 +370,7 @@ export default function SqlPlayground() {
               <i className="fas fa-play" /> Run
             </button>
             <button className="pg-btn" onClick={() => setSql('')}>🗑️ Clear</button>
+            <button className="pg-btn" onClick={() => { setSql(formatSql(sql)); }}>✨ Format</button>
             <button className="pg-btn" onClick={copySql}>{copied ? '✅ Copied!' : '📋 Copy'}</button>
             <button className="pg-btn" onClick={resetDb}>🔄 Reset</button>
             {results && results.length > 0 && (
@@ -503,31 +547,31 @@ export default function SqlPlayground() {
               <div className="pg-schema-cols">
                 <div className="pg-schema-card">
                   <b>employees</b>
-                  <code>id, name, department, salary, hire_date, city, age, rating</code>
+                  <code>id, name, department, salary, hire_date, city, age, rating, email, gender, experience_years, bonus</code>
                 </div>
                 <div className="pg-schema-card">
                   <b>departments</b>
-                  <code>id, dept_name, location, budget</code>
+                  <code>id, dept_name, location, budget, head_name, founded_year, employee_count, avg_salary, rating</code>
                 </div>
                 <div className="pg-schema-card">
                   <b>sales</b>
-                  <code>id, product, category, amount, region, sale_date, quantity</code>
+                  <code>id, product, category, amount, region, sale_date, quantity, discount, profit, payment_method</code>
                 </div>
                 <div className="pg-schema-card">
                   <b>products</b>
-                  <code>id, name, category, price, stock</code>
+                  <code>id, name, category, price, stock, brand, rating, weight_kg, supplier</code>
                 </div>
                 <div className="pg-schema-card">
                   <b>customers</b>
-                  <code>id, name, city, join_date, tier</code>
+                  <code>id, name, city, join_date, tier, email, phone, age, gender</code>
                 </div>
                 <div className="pg-schema-card">
                   <b>orders</b>
-                  <code>id, customer_id, product_id, quantity, order_date, status</code>
+                  <code>id, customer_id, product_id, quantity, order_date, status, total_price, discount, payment_method</code>
                 </div>
                 <div className="pg-schema-card">
                   <b>student_scores</b>
-                  <code>id, name, subject, score</code>
+                  <code>id, name, subject, score, class, term, attempts</code>
                 </div>
               </div>
             </div>

@@ -1,4 +1,3 @@
-import { prisma } from '@/lib/prisma';
 import Hero from '@/components/Hero';
 import CategoryTiles from '@/components/CategoryTiles';
 import ToolsStrip from '@/components/ToolsStrip';
@@ -7,33 +6,15 @@ import PostList from '@/components/PostList';
 import SidebarClient from '@/components/SidebarClient';
 import AdSlots from '@/components/AdSlots';
 
-// HOME v5 - PERFORMANCE FINAL:
-// - Posts ab SERVER-SIDE HTML mein (ISR 60s) - client ko /api/posts ka 6.9s wait nahi
-//   -> Speed Index ka bada hissa khatam (mobile 80 -> 90+)
-// - Sirf 1 DB query (94 posts ka light select) - 60 sec pe ek baar, phir CDN cache
-// - Hero + tiles + posts sab HTML mein -> FCP/LCP/SI sab fast
+// HOME v6 - 100% STATIC (PERFORMANCE FINAL)
+// - Server pe KOI DB query nahi -> TTFB hamesha ~0.2s (cache MISS pe bhi!)
+//   (pehle ISR 300s tha -> cache expire pe 3s TTFB -> LCP 3.67s)
+// - LCP element (navbar logo) turant paint hota hai -> LCP ~1s
+// - Posts /api/posts se client-side (API 300s cached -> repeat fast)
+// - Sidebar /api/sidebar se client-side (5min cache)
+// - Sab widgets lazy-loaded (LazyWidgets)
 
-export const revalidate = 300;
-
-export default async function HomePage() {
-  // SIRF 1 QUERY - saari posts (filters ke liye) - ISR 60s (CDN pe cached)
-  let posts: any[] = [];
-  try {
-    posts = await prisma.article.findMany({
-      where: { status: 'PUBLISHED' },
-      select: {
-        id: true, title: true, slug: true, excerpt: true,
-        publishedAt: true, createdAt: true, readingTime: true,
-        category: { select: { name: true, slug: true } },
-        author: { select: { name: true } },
-      },
-      orderBy: { publishedAt: 'desc' },
-      take: 200,
-    });
-  } catch (e) {
-    console.error('home posts error:', e);
-  }
-
+export default function HomePage() {
   return (
     <>
       <Hero />
@@ -47,8 +28,8 @@ export default async function HomePage() {
             <span className="section-chip"><i className="fas fa-newspaper" /></span>
             <span data-i18n="sec.latest">Latest Articles</span>
           </h2>
-          {/* SMOOTH - posts HTML mein turant + client-side filter/pagination */}
-          <PostList initialPosts={posts as any} />
+          {/* SMOOTH - client-side filter + pagination (bina reload) */}
+          <PostList />
         </main>
 
         <SidebarClient />

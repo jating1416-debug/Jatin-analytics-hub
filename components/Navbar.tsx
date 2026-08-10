@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import LanguageToggle from '@/components/LanguageToggle';
 
 // NAVBAR v3 - REAL category pages pe links (reliable - koi JS depend nahi)
 // + compact layout (portfolio kabhi cut nahi hoga) + i18n labels
@@ -43,7 +42,7 @@ export default function Navbar() {
     const q = value.trim();
     if (q.length < 2) { setSuggestions([]); setShowSuggest(false); return; }
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=5`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=8`);
       if (res.ok) {
         const data = await res.json();
         setSuggestions(data.results || []);
@@ -143,8 +142,6 @@ export default function Navbar() {
         >
           <i className="fas fa-bolt" /> <span>Hub</span>
         </button>
-
-        <LanguageToggle />
 
         <button
           className="dark-mode-toggle"
