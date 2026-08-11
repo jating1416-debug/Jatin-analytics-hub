@@ -4257,16 +4257,20 @@
     background: var(--gradient-soft); color: var(--primary);
     border-radius: 14px; padding: 3px 11px; font-size: 0.75rem; font-weight: 800;
   }
-  .admin-row-actions { white-space: nowrap; }
+  .admin-row-actions { white-space: normal; min-width: 230px; }
   .admin-row-actions a, .admin-row-actions button {
     display: inline-flex; align-items: center; justify-content: center;
     width: 30px; height: 30px; border-radius: 9px;
     background: var(--bg); border: 1px solid var(--border);
     color: var(--text-dark); text-decoration: none; cursor: pointer;
-    margin-right: 5px; font-size: 0.78rem; transition: all 0.2s ease;
+    margin-right: 5px; margin-bottom: 4px; font-size: 0.78rem; transition: all 0.2s ease;
   }
   .admin-row-actions a:hover { background: var(--primary); color: #fff; border-color: transparent; transform: translateY(-2px); }
   .admin-row-actions button:hover { background: #ef4444; color: #fff; border-color: transparent; transform: translateY(-2px); }
+  .admin-row-actions .admin-quick-status:hover { transform: translateY(-2px); filter: brightness(1.1); }
+  .admin-row-actions select:hover { border-color: var(--primary); }
+  /* featured star button - red hover nahi (star toogle hai) */
+  .admin-row-actions button[title*="Featured"]:hover { background: rgba(245,158,11,0.15); color: #f59e0b; border-color: transparent; }
 
   /* ---------- DONUT ---------- */
   .admin-donut-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; justify-content: center; padding: 8px 0; }
@@ -5735,10 +5739,21 @@ body:has(.route-loading-overlay) .footer { display: none !important; }
   background: rgba(102, 126, 234, 0.08) !important;
 }
 
-/* --- 4) HEADINGS: dark mode mein bhi readable (hardcoded color khatam) --- */
-.post-body h1, .post-body h2, .post-body h3, .post-body h4, .post-body h5,
-.post-body h1 *, .post-body h2 *, .post-body h3 *, .post-body h4 *, .post-body h5 * {
-  color: var(--text-dark) !important;
+/* --- 4) HEADINGS: theme color (bina !important - inline white hero pe kaam kare) --- */
+.post-body h1, .post-body h2, .post-body h3, .post-body h4, .post-body h5 {
+  color: var(--text-dark);
+}
+/* HERO HEADER (dark gradient box): title WHITE + badge readable - DONO modes mein */
+.post-body div[style*="linear-gradient"] h1,
+.post-body div[style*="linear-gradient"] h2,
+.post-body div[style*="linear-gradient"] h3 {
+  color: #ffffff !important;
+}
+.post-body div[style*="linear-gradient"] span {
+  color: #0f172a !important;
+}
+.post-body div[style*="linear-gradient"] p {
+  color: #cbd5e1 !important;
 }
 
 /* --- 5) OUTPUT LABEL + NOTE (pipe tables se bane) --- */

@@ -376,9 +376,10 @@ export function normalizeContentServer(html: string): string {
     out = out.replace(/<h([1-6])([^>]*)>/gi, (m, lvl: string, attrs: string) => {
       const cleaned = attrs.replace(/\s*style\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, (sm, st: string) => {
         const val = st.slice(1, -1);
+        // WHITE colors preserve karo (hero title white rehna chahiye);
+        // sirf DARK colors strip karo (dark mode mein invisible the)
         const nv = val
-          .replace(/color\s*:\s*#[0-9a-fA-F]{3,8}\s*;?/g, '')
-          .replace(/color\s*:\s*rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)\s*;?/g, '')
+          .replace(/color\s*:\s*(?!white\b|#fff\b|#ffffff\b|rgb\s*\(\s*255\s*,\s*255\s*,\s*255\s*\))[^;]+;?/gi, '')
           .replace(/\s*;\s*$/g, '').replace(/\s*:\s*$/g, '');
         return nv ? ` style="${nv}"` : '';
       });

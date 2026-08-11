@@ -52,6 +52,12 @@ export default function ArticleEditor({
   const [seriesOrder, setSeriesOrder] = useState<number>(initial?.seriesOrder || 1);
   const lastSavedRef = useRef(JSON.stringify({ title: initial?.title, content: initial?.content }));
   const [mode, setMode] = useState<'write' | 'html' | 'preview'>('write');
+  // ASLI ARTICLE ID STATE - duplicate-draft bug ka fix:
+  // pehle articleId prop kabhi state mein nahi jata tha -> nayi post pe
+  // har autosave/save PHIR SE POST karta tha -> har baar nayi article
+  // banti thi (slug -1, -2... aur "Untitled Draft"). Ab id state mein
+  // save hota hai -> pehli create ke baad sab PUT (update) hote hain.
+  const [currentId, setCurrentId] = useState<number | null>(articleId || null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -114,9 +120,12 @@ export default function ArticleEditor({
       const snapshot = JSON.stringify({ title, content, excerpt, categoryId });
       if (snapshot === lastSavedRef.current) return; // koi change nahi
       if (!title.trim() && !content.trim()) return;
+      // "Untitled Draft" mat banao - title ke bina nayi post CREATE mat karo
+      // (sirf EXISTING post pe autosave chalega jab tak title na ho)
+      if (!currentId && !title.trim()) return;
       setAutoSaving(true);
-      fetch(articleId ? `/api/articles/${articleId}` : '/api/articles', {
-        method: articleId ? 'PUT' : 'POST',
+      fetch(currentId ? `/api/articles/${currentId}` : '/api/articles', {
+        method: currentId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title || 'Untitled Draft',
@@ -127,14 +136,19 @@ export default function ArticleEditor({
         .then((r) => r.json())
         .then((d) => {
           lastSavedRef.current = snapshot;
-          if (!articleId && d.id) window.history.replaceState(null, '', `/admin/articles/${d.id}/edit`);
+          if (!currentId && d.id) {
+            // ID STATE UPDATE - ab agla save isi ko update karega (duplicate nahi)
+            setCurrentId(d.id);
+            if (d.slug) setSlug(d.slug);
+            window.history.replaceState(null, '', `/admin/articles/${d.id}/edit`);
+          }
         })
         .catch(() => {})
         .finally(() => setAutoSaving(false));
     }, 30000);
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, content, excerpt, categoryId, slug, coverImage, metaDescription, tags, featured, scheduledAt]);
+  }, [title, content, excerpt, categoryId, slug, coverImage, metaDescription, tags, featured, scheduledAt, currentId]);
 
   // ---------- Save ----------
   const save = async (finalStatus?: string) => {
@@ -142,8 +156,8 @@ export default function ArticleEditor({
     setMsg(null);
     const target = finalStatus || status;
     try {
-      const res = await fetch(articleId ? `/api/articles/${articleId}` : '/api/articles', {
-        method: articleId ? 'PUT' : 'POST',
+      const res = await fetch(currentId ? `/api/articles/${currentId}` : '/api/articles', {
+        method: currentId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title, slug, content, excerpt, categoryId, status: target,
@@ -164,7 +178,10 @@ export default function ArticleEditor({
             ? `✅ Published! Category: ${catName}`
             : `💾 Draft saved. Category: ${catName}`,
         });
-        if (!articleId && data.id) {
+        if (!currentId && data.id) {
+          // ID STATE UPDATE - ab agla save isi ko update karega (duplicate nahi)
+          setCurrentId(data.id);
+          if (data.slug) setSlug(data.slug);
           router.push(`/admin/articles/${data.id}/edit`);
           router.refresh();
         } else {
@@ -191,7 +208,7 @@ export default function ArticleEditor({
       {/* SAVE ACTION BAR */}
       <div className="admin-editor-actions">
         <button className="admin-cta-btn" onClick={() => save('PUBLISHED')} disabled={saving} style={{ opacity: saving ? 0.6 : 1, border: 'none', cursor: 'pointer' }}>
-          <i className="fas fa-globe" /> {articleId ? 'Update & Publish' : 'Publish'}
+          <i className="fas fa-globe" /> {currentId ? 'Update & Publish' : 'Publish'}
         </button>
         <button
           onClick={() => save('DRAFT')} disabled={saving}
@@ -199,7 +216,7 @@ export default function ArticleEditor({
         >
           <i className="fas fa-save" /> Save Draft
         </button>
-        {articleId && slug && (
+        {currentId && slug && (
           <a className="admin-view-live" href={`/${catSlug || 'post'}/${slug}`} target="_blank" rel="noopener">
             <i className="fas fa-external-link" /> View Post
           </a>

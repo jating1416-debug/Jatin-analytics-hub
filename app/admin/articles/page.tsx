@@ -10,6 +10,7 @@ type Article = {
   status: string;
   viewCount: number;
   updatedAt: string;
+  featured: boolean;
   category: { name: string; slug: string } | null;
 };
 
@@ -56,6 +57,50 @@ export default function AdminArticlesPage() {
     if (res.ok) { setMsg({ type: 'ok', text: '🗑️ Post deleted' }); load(); }
     else setMsg({ type: 'err', text: 'Delete fail' });
   };
+
+  // ============ QUICK ACTIONS (list se hi, bina editor khole) ============
+  // 1) Status toggle: DRAFT <-> PUBLISHED (ek click)
+  const quickStatus = async (a: Article) => {
+    const next = a.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED';
+    const res = await fetch(`/api/articles/${a.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: next }),
+    });
+    if (res.ok) {
+      setMsg({ type: 'ok', text: next === 'PUBLISHED' ? `✅ Published: ${a.title.slice(0, 40)}` : `💾 Draft: ${a.title.slice(0, 40)}` });
+      load();
+    } else setMsg({ type: 'err', text: 'Status change fail' });
+  };
+
+  // 2) Featured star toggle (Hot Picks mein dikhata hai)
+  const quickFeatured = async (a: Article) => {
+    const res = await fetch(`/api/articles/${a.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ featured: !a.featured }),
+    });
+    if (res.ok) {
+      setMsg({ type: 'ok', text: a.featured ? `☆ Featured hata diya: ${a.title.slice(0, 40)}` : `★ Featured kiya: ${a.title.slice(0, 40)}` });
+      load();
+    } else setMsg({ type: 'err', text: 'Featured change fail' });
+  };
+
+  // 3) Category quick change (dropdown se)
+  const quickCategory = async (a: Article, catId: number) => {
+    if (!catId || catId === a.category?.id) return;
+    const res = await fetch(`/api/articles/${a.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ categoryId: catId }),
+    });
+    if (res.ok) {
+      const catName = categories.find((c) => c.id === catId)?.name || '?';
+      setMsg({ type: 'ok', text: `📁 Category → ${catName}: ${a.title.slice(0, 40)}` });
+      load();
+    } else setMsg({ type: 'err', text: 'Category change fail' });
+  };
+  // ========================================================================
 
   const bulk = async (action: 'PUBLISHED' | 'DRAFT' | 'ARCHIVED' | 'DELETE') => {
     if (selected.size === 0) return;
@@ -201,6 +246,45 @@ export default function AdminArticlesPage() {
                   </td>
                   <td><span className="admin-views-badge"><i className="fas fa-eye" /> {a.viewCount.toLocaleString()}</span></td>
                   <td className="admin-row-actions">
+                    {/* QUICK ACTIONS - bina editor khole */}
+                    <button
+                      onClick={() => quickFeatured(a)}
+                      title={a.featured ? 'Featured hai — click karke hatao' : 'Featured banao (Hot Picks)'}
+                      style={{
+                        border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.05rem',
+                        color: a.featured ? '#f59e0b' : 'var(--text-light)',
+                      }}
+                    >
+                      {a.featured ? '★' : '☆'}
+                    </button>
+                    <button
+                      onClick={() => quickStatus(a)}
+                      title={a.status === 'PUBLISHED' ? 'Draft banao' : 'Publish karo (ek click)'}
+                      className={`admin-quick-status ${a.status === 'PUBLISHED' ? 'pub' : 'draft'}`}
+                      style={{
+                        border: 'none', cursor: 'pointer', borderRadius: 12, padding: '3px 10px',
+                        fontSize: '0.68rem', fontWeight: 700,
+                        background: a.status === 'PUBLISHED' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+                        color: a.status === 'PUBLISHED' ? '#059669' : '#b45309',
+                      }}
+                    >
+                      {a.status === 'PUBLISHED' ? '✓ Published →Draft' : '↗ Publish'}
+                    </button>
+                    <select
+                      value={a.category?.id || 0}
+                      onChange={(e) => quickCategory(a, Number(e.target.value))}
+                      title="Category badlo (bina editor khole)"
+                      style={{
+                        border: '1px solid var(--border)', borderRadius: 10, padding: '2px 4px',
+                        background: 'var(--card-bg)', color: 'var(--text-dark)', fontSize: '0.68rem',
+                        maxWidth: 90, cursor: 'pointer',
+                      }}
+                    >
+                      <option value={0}>📁 ...</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
                     <Link href={`/admin/articles/${a.id}/edit`} title="Edit"><i className="fas fa-pen" /></Link>
                     <a href={`/${a.category?.slug || 'post'}/${a.slug}`} target="_blank" rel="noopener" title="View live"><i className="fas fa-external-link" /></a>
                     <button onClick={() => del(a.id)} title="Delete"><i className="fas fa-trash" /></button>
