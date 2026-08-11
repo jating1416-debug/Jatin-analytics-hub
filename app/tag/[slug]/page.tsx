@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
+import { EXCLUDED_SLUGS } from '@/lib/search';
 import ArticleCard from '@/components/ArticleCard';
 import Pagination from '@/components/Pagination';
 import { POSTS_PER_PAGE, SITE_URL } from '@/lib/utils';
@@ -30,7 +31,7 @@ export default async function TagPage({ params, searchParams }: { params: Promis
   try {
     const tag = await prisma.tag.findUnique({ where: { slug } });
     if (!tag) notFound();
-    const where = { status: 'PUBLISHED' as const, tags: { some: { tagId: tag.id } } };
+    const where = { status: 'PUBLISHED' as const, tags: { some: { tagId: tag.id } }, slug: { notIn: EXCLUDED_SLUGS } };
     // SEQUENTIAL (pooler connection_limit=1 ke saath Promise.all avoid)
     articles = await prisma.article.findMany({ where, include: { category: true, author: { select: { name: true } } }, orderBy: { publishedAt: 'desc' }, skip: (page - 1) * POSTS_PER_PAGE, take: POSTS_PER_PAGE });
     total = await prisma.article.count({ where });

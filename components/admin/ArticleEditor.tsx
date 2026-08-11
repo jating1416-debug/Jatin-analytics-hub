@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import SeoChecker from '@/components/admin/SeoChecker';
-import RichTextEditor from '@/components/admin/RichTextEditor';
+import TipTapEditor from '@/components/admin/TipTapEditor';
 
 type Category = { id: number; name: string; slug: string };
 
@@ -375,7 +375,7 @@ export default function ArticleEditor({
 
       {/* ---------- WRITE MODE: Blogger-style WYSIWYG (type karo, HTML khud banta hai) ---------- */}
       {mode === 'write' && (
-        <RichTextEditor value={content} onChange={setContent} />
+        <TipTapEditor value={content} onChange={setContent} />
       )}
 
       {/* ---------- HTML MODE ---------- */}

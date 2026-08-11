@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { EXCLUDED_SLUGS } from '@/lib/search';
 
 // LIGHTWEIGHT POSTS API - saari summaries EK baar (client-side filter ke liye)
 // ?all=1 -> saari published posts ki summaries (content ke bina)
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
   try {
     if (all) {
       const posts = await prisma.article.findMany({
-        where: { status: 'PUBLISHED' },
+        where: { status: 'PUBLISHED', slug: { notIn: EXCLUDED_SLUGS } },
         select: {
           id: true, title: true, slug: true, excerpt: true,
           publishedAt: true, createdAt: true, readingTime: true,
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
     const cat = sp.get('cat') || 'all';
     const page = Math.max(1, parseInt(sp.get('page') || '1', 10) || 1);
 
-    const where: any = { status: 'PUBLISHED' };
+    const where: any = { status: 'PUBLISHED', slug: { notIn: EXCLUDED_SLUGS } };
     if (cat === 'error') {
       where.OR = [
         { title: { contains: 'error', mode: 'insensitive' } },

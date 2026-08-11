@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
+import { EXCLUDED_SLUGS } from '@/lib/search';
 import ArticleCard from '@/components/ArticleCard';
 import Pagination from '@/components/Pagination';
 import { POSTS_PER_PAGE, CATEGORY_LABELS, SITE_URL } from '@/lib/utils';
@@ -37,7 +38,7 @@ export default async function CategoryPage({ params, searchParams }: { params: P
   }
   if (!cat) notFound();
 
-  const where = { status: 'PUBLISHED' as const, categoryId: cat.id };
+  const where = { status: 'PUBLISHED' as const, categoryId: cat.id, slug: { notIn: EXCLUDED_SLUGS } };
   let articles: Awaited<ReturnType<typeof prisma.article.findMany>> = [];
   let total = 0;
   let dbError = false;

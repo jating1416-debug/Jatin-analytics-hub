@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { buildSearchWhere, sortByRelevance } from '@/lib/search';
 import ArticleCard from '@/components/ArticleCard';
 import type { ArticleWithCategory } from '@/lib/types';
 import type { Metadata } from 'next';
@@ -15,24 +16,16 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   let dbError = false;
   if (q) {
     try {
-    // ADVANCED SEARCH: 3 words tak split - har word title/excerpt/content mein
-    // (same logic jo /api/search mein hai - taaki 3 words likhte hi related saara data aaye)
+    // BLOGGER-STYLE SEARCH: HAR word match hona chahiye (AND) +
+    // relevance sort (title pehle) + policy pages excluded
     const words = q.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 3);
-    articles = await prisma.article.findMany({
-      where: {
-        status: 'PUBLISHED',
-        OR: words.map((w) => ({
-          OR: [
-            { title: { contains: w, mode: 'insensitive' } },
-            { excerpt: { contains: w, mode: 'insensitive' } },
-            { content: { contains: w, mode: 'insensitive' } },
-          ],
-        })),
-      },
+    const found = await prisma.article.findMany({
+      where: buildSearchWhere(words),
       include: { category: true, author: { select: { name: true } } },
       orderBy: { publishedAt: 'desc' },
       take: 50,
     });
+    articles = sortByRelevance(found, words);
     } catch (e) { dbError = true; console.error('DB error search:', e); }
   }
 

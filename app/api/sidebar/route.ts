@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { EXCLUDED_SLUGS } from '@/lib/search';
 import { formatDate } from '@/lib/utils';
 
 // /api/sidebar - categories + recent + popular + featured + stats
@@ -62,21 +63,21 @@ export async function GET() {
       totalPosts = categories.reduce((sum: number, c: any) => sum + (c._count?.articles || 0), 0);
 
       recent = await prisma.article.findMany({
-        where: { status: 'PUBLISHED' },
+        where: { status: 'PUBLISHED', slug: { notIn: EXCLUDED_SLUGS } },
         include: { category: true },
         orderBy: { publishedAt: 'desc' },
         take: 5,
       });
 
       popular = await prisma.article.findMany({
-        where: { status: 'PUBLISHED' },
+        where: { status: 'PUBLISHED', slug: { notIn: EXCLUDED_SLUGS } },
         include: { category: true },
         orderBy: { viewCount: 'desc' },
         take: 5,
       });
 
       featured = await prisma.article.findMany({
-        where: { status: 'PUBLISHED', featured: true },
+        where: { status: 'PUBLISHED', featured: true, slug: { notIn: EXCLUDED_SLUGS } },
         include: { category: true },
         orderBy: { publishedAt: 'desc' },
         take: 8,

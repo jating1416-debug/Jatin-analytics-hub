@@ -54,7 +54,7 @@ model Article {
   canonicalUrl    String?
   coverImage      String?
   readingTime     Int?
-  category        Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category        Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   categoryId      Int
   tags            ArticleTag[]
   author          User         @relation(fields: [authorId], references: [id])

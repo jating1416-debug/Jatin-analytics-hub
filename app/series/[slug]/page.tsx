@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
+import { EXCLUDED_SLUGS } from '@/lib/search';
 import ArticleCard from '@/components/ArticleCard';
 
 // PUBLIC SERIES PAGE - /series/slug - saare parts
@@ -23,7 +24,7 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
       where: { slug },
       include: {
         articles: {
-          where: { status: 'PUBLISHED' },
+          where: { status: 'PUBLISHED', slug: { notIn: EXCLUDED_SLUGS } },
           include: { category: true, author: { select: { name: true } } },
           orderBy: [{ seriesOrder: 'asc' }, { publishedAt: 'desc' }],
         },

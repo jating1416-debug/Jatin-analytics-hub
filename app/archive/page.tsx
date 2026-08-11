@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
+import { EXCLUDED_SLUGS } from '@/lib/search';
 import { formatDate } from '@/lib/utils';
 
 export const revalidate = 60; // ISR - 60s cache (fast repeat visits)
@@ -9,7 +10,7 @@ export default async function ArchivePage() {
   let dbError = false;
   try {
     articles = await prisma.article.findMany({
-      where: { status: 'PUBLISHED' },
+      where: { status: 'PUBLISHED', slug: { notIn: EXCLUDED_SLUGS } },
       include: { category: true },
       orderBy: { publishedAt: 'desc' },
       take: 500,
