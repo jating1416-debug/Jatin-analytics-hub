@@ -143,24 +143,17 @@ export default function CodeHighlighter() {
         if (!body) return;
 
         body.querySelectorAll('pre').forEach((pre) => {
-        // COPY + THEME TOGGLE buttons (ek baar hi)
+        // COPY BUTTON (ek baar hi) - moon/theme button HATAO (confusing)
         if (!pre.getAttribute('data-copy-done')) {
           pre.setAttribute('data-copy-done', '1');
           pre.style.position = 'relative';
-
-          const themeBtn = document.createElement('button');
-          themeBtn.textContent = '🌙';
-          themeBtn.title = 'Code theme (dark/light)';
-          themeBtn.style.cssText = 'position:absolute;top:8px;right:52px;background:rgba(255,255,255,0.12);color:#e2e8f0;border:1px solid rgba(255,255,255,0.2);padding:4px 9px;border-radius:6px;font-size:0.72rem;cursor:pointer;z-index:5;';
-          themeBtn.onclick = () => {
-            pre.classList.toggle('code-light');
-            themeBtn.textContent = pre.classList.contains('code-light') ? '☀️' : '🌙';
-          };
-          pre.appendChild(themeBtn);
+          // buttons ke liye upar space (code kabhi overlap nahi hoga)
+          pre.style.paddingTop = '46px';
 
           const btn = document.createElement('button');
           btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
-          btn.style.cssText = 'position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.12);color:#e2e8f0;border:1px solid rgba(255,255,255,0.2);padding:4px 10px;border-radius:6px;font-size:0.72rem;cursor:pointer;z-index:5;font-family:inherit;';
+          btn.title = 'Copy code';
+          btn.style.cssText = 'position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.14);color:#e2e8f0;border:1px solid rgba(255,255,255,0.22);padding:4px 10px;border-radius:6px;font-size:0.72rem;cursor:pointer;z-index:5;font-family:inherit;';
           btn.onclick = () => {
             const code = pre.querySelector('code') || pre;
             const text = (code.textContent || '').replace(/\s+$/g, '');

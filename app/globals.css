@@ -5692,3 +5692,101 @@ body:has(.route-loading-overlay) .footer { display: none !important; }
   overflow-wrap: break-word !important;
   min-width: 0 !important;
 }
+
+/* ============================================================
+   DESIGN FINAL FIXES (tables + code + dark mode) - TOP SITES JESA
+   ============================================================ */
+
+/* --- 1) CODE BLOCKS: bina horizontal scroll (wrap) ---
+   Lambi SQL query ab agli line pe chali jaati hai - pura code
+   screen pe dikhta hai, scroll nahi. */
+.post-body pre,
+.post-body pre code {
+  white-space: pre-wrap !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  overflow-x: hidden !important;
+}
+
+/* --- 2) TABLES: content ke hisaab se width (space bekar nahi) ---
+   3-column table ab apni content jitni chaudi - full-width stretch
+   nahi. Badi tables max-width tak, overflow pe scroll. */
+.post-body table,
+.post-body .output-table {
+  width: fit-content !important;
+  min-width: 50% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+}
+
+/* --- 3) ROWS: zebra HATAO (white/purple/white bekar tha) ---
+   Ab har row same bg + neeche halki border - clean, consistent,
+   dark mode mein bhi ek jaisa. */
+.post-body table tbody tr:nth-child(even) td,
+.post-body .output-table tbody tr:nth-child(even) td {
+  background: transparent !important;
+}
+.post-body table td,
+.post-body .output-table td {
+  border-bottom: 1px solid var(--border) !important;
+}
+.post-body table tbody tr:hover td,
+.post-body .output-table tbody tr:hover td {
+  background: rgba(102, 126, 234, 0.08) !important;
+}
+
+/* --- 4) HEADINGS: dark mode mein bhi readable (hardcoded color khatam) --- */
+.post-body h1, .post-body h2, .post-body h3, .post-body h4, .post-body h5,
+.post-body h1 *, .post-body h2 *, .post-body h3 *, .post-body h4 *, .post-body h5 * {
+  color: var(--text-dark) !important;
+}
+
+/* --- 5) OUTPUT LABEL + NOTE (pipe tables se bane) --- */
+.post-body .output-label {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--primary) !important;
+  margin: 18px 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.post-body .output-label::before {
+  content: '';
+  width: 6px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--gradient);
+  display: inline-block;
+}
+.post-body .output-note {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin: 10px 0 0;
+  font-style: italic;
+}
+
+/* --- 6) DARK MODE: bachi-kuchi white boxes bhi theme ho jayen --- */
+body.dark-mode .post-body div[style*="rgb(255, 255, 255)"],
+body.dark-mode .post-body p[style*="rgb(255, 255, 255)"],
+body.dark-mode .post-body div[style*="rgb(248, 250, 252)"],
+body.dark-mode .post-body p[style*="rgb(248, 250, 252)"],
+body.dark-mode .post-body div[style*="rgb(241, 245, 249)"],
+body.dark-mode .post-body p[style*="rgb(241, 245, 249)"],
+body.dark-mode .post-body div[style*="rgb(238, 247, 255)"],
+body.dark-mode .post-body p[style*="rgb(238, 247, 255)"] {
+  background: var(--card-bg) !important;
+}
+body.dark-mode .post-body div[style*="rgb(255, 255, 255)"],
+body.dark-mode .post-body p[style*="rgb(255, 255, 255)"] {
+  color: var(--text-dark) !important;
+}
+
+/* --- 7) COPY BUTTON clean look --- */
+.post-body pre button {
+  transition: all 0.2s ease;
+}
+.post-body pre button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}

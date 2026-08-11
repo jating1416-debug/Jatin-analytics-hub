@@ -23,10 +23,13 @@ export default function TryInPlayground() {
       if (pre.getAttribute('data-tp-done')) return;
       pre.setAttribute('data-tp-done', '1');
       pre.style.position = 'relative';
+      // buttons ke liye upar space (code kabhi overlap nahi hoga)
+      pre.style.paddingTop = '46px';
 
       const btn = document.createElement('button');
       btn.innerHTML = '🧠 Try in Playground';
-      btn.style.cssText = 'position:absolute;top:8px;left:8px;background:var(--gradient);color:#fff;border:none;padding:6px 14px;border-radius:16px;font-size:0.72rem;font-weight:700;cursor:pointer;z-index:6;box-shadow:0 3px 10px rgba(102,126,234,0.35);';
+      // COPY button ke bagal (top-right) - code ki pehli line kabhi nahi chhupega
+      btn.style.cssText = 'position:absolute;top:8px;right:56px;background:var(--gradient);color:#fff;border:none;padding:5px 12px;border-radius:14px;font-size:0.7rem;font-weight:700;cursor:pointer;z-index:6;box-shadow:0 3px 10px rgba(102,126,234,0.35);';
       btn.onclick = () => {
         try {
           localStorage.setItem('di_sql_draft', text);
