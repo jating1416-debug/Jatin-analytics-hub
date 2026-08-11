@@ -5657,3 +5657,30 @@ body.dark-mode .post-body table tbody tr:nth-child(even) td {
 /* --- CLS FIX: loading ke waqt footer hidden -> content stream ke
        baad footer final position pe dikhega (koi shift nahi) --- */
 body:has(.route-loading-overlay) .footer { display: none !important; }
+
+/* ============================================================
+   CODE BLOCK VS CODE DARK+ THEME (FINAL - sabse end mein)
+   Pehle background inline style se aata tha (Blogger) jo content
+   fix mein strip hua -> ab CSS se dark background pakka!
+   - CodeHighlighter colors (blue keywords, yellow functions,
+     green comments) inhi pe saaf dikhte hain
+   - Theme toggle button (🌙/☀️) .code-light class lagata hai
+============================================================ */
+.post-body pre {
+  background: #1e1e1e !important;      /* VS Code Dark+ background */
+  color: #d4d4d4 !important;           /* VS Code default text */
+  border-radius: 8px;
+  border: 1px solid #333;
+  padding: 14px 16px;
+}
+.post-body pre code {
+  color: #d4d4d4 !important;
+  background: transparent !important;
+}
+/* Light theme toggle (CodeHighlighter ka 🌙/☀️ button) */
+.post-body pre.code-light {
+  background: #f6f8fa !important;
+  color: #1e293b !important;
+  border-color: #d7dde8 !important;
+}
+.post-body pre.code-light code { color: inherit !important; }

@@ -2,6 +2,7 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { cache, Suspense } from 'react';
 import { prisma } from '@/lib/prisma';
+import { normalizeContentServer } from '@/lib/post-transform';
 import TableOfContents from '@/components/TableOfContents';
 import SidebarClient from '@/components/SidebarClient';
 import ViewCounter from '@/components/ViewCounter';
@@ -15,24 +16,30 @@ import FocusModeButton from '@/components/FocusModeButton';
 import TldrBox from '@/components/TldrBox';
 import HeadingLinks from '@/components/HeadingLinks';
 import AdSlots from '@/components/AdSlots';
-import CodeHighlighter from '@/components/CodeHighlighter';
 import ArticleExtrasNav, { RelatedPosts } from '@/components/ArticleExtras';
-import { normalizeContentServer } from '@/lib/post-transform';
 import { SITE_URL, formatDate, excerptFrom } from '@/lib/utils';
 
-// ARTICLE PAGE v4 - LCP FAST + CRASH-PROOF:
-// - metadata + page EK hi DB query (React cache) - critical path SIRF 1 query
-// - h1 + content TURANT stream (related/series ab Suspense mein background mein)
-//   -> LCP 5.7s se ~1-2s (title ke liye ab koi extra DB wait nahi)
-// - Views SIRF client (ViewCounter) se count hote hain
-// - 5 min CDN cache -> repeat visits INSTANT
-// - maxDuration 60 -> Vercel 504 kabhi nahi
+// ARTICLE PAGE v3 - FASTEST (Suspense streaming + static build):
+// - getPost = SIRF 1 zaroori query (React cache -> metadata + page share)
+// - related/series/prev/next ab BACKGROUND mein STREAM hote hain
+//   (Suspense + ArticleExtras) -> h1 + content TURANT dikhta hai (LCP fix)
+// - latest 30 posts BUILD TIME pe static ban jate hain -> pehli visit bhi instant
+// - content SERVER pe normalize hota hai (dark tables, quizzes, callouts)
+// - 60s Vercel function limit -> 504 kabhi nahi
+// - saari extras queries 4s timeout ke saath (skip ho sakti hain, page nahi atkega)
 
-export const revalidate = 300; // 5 min cache - post fast kholo
-export const maxDuration = 60; // Vercel function limit 60s (Hobby max)
+export const maxDuration = 60;
+export const revalidate = 300; // 5 min CDN cache - repeat visits INSTANT
 
-// LCP FIX: latest 30 posts BUILD TIME pe static pre-render ho jaate hain
-// -> pehli visit bhi CDN se INSTANT (DB hit nahi). Nayi posts on-demand.
+const getPost = cache(async (slug: string) => {
+  return prisma.article.findUnique({
+    where: { slug },
+    include: { category: true, author: { select: { name: true } } },
+  });
+});
+
+// BUILD TIME: latest 30 posts STATIC (CDN se instant). DB fail ho to
+// bina kisi problem ke skip (sab dynamic rehta hai - koi break nahi).
 export async function generateStaticParams() {
   try {
     const posts = await prisma.article.findMany({
@@ -43,17 +50,10 @@ export async function generateStaticParams() {
     });
     return posts.map((p) => ({ category: p.category?.slug || 'post', slug: p.slug }));
   } catch (e) {
-    console.error('generateStaticParams error (build pe DB na ho to dynamic):', e);
+    console.error('generateStaticParams error (safely skipped):', e);
     return [];
   }
 }
-
-const getPost = cache(async (slug: string) => {
-  return prisma.article.findUnique({
-    where: { slug },
-    include: { category: true, author: { select: { name: true } } },
-  });
-});
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string; slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -134,8 +134,18 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
   const catSlug = post.category?.slug || 'post';
   const url = `${SITE_URL}/${catSlug}/${post.slug}`;
 
-  // extras (prev/next/series/related) ab Suspense mein stream hote hain -
-  // yahan koi DB query nahi => h1 + content TURANT render (LCP fast)
+  // SERVER-SIDE NORMALIZE: dark-mode tables, quizzes, callouts, h4->h3,
+  // lazy images — paint se PEHLE (CLS zero + sab kuch readable)
+  const contentHtml = normalizeContentServer(post.content);
+
+  // Extras (related/series/prev/next) ke liye SIRF ids bhejte hain —
+  // queries ArticleExtras ke andar Suspense mein stream hoti hain
+  const extrasProps = {
+    postId: post.id,
+    categoryId: post.categoryId,
+    publishedAt: post.publishedAt,
+    seriesId: post.seriesId,
+  };
 
   return (
     <>
@@ -199,7 +209,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
             <div
               className="post-body entry-content"
               style={{ fontSize: '1rem', lineHeight: 1.8, color: 'var(--text-light)' }}
-              dangerouslySetInnerHTML={{ __html: normalizeContentServer(post.content) }}
+              dangerouslySetInnerHTML={{ __html: contentHtml }}
             />
 
             <AdSlots position="article" />
@@ -224,14 +234,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
               </div>
             </div>
 
-            {/* Prev / Next + Series - STREAMED (LCP ke liye title pehle) */}
+            {/* PREV/NEXT + SERIES - STREAMED (background mein aate hain, page nahi rukta) */}
             <Suspense fallback={null}>
-              <ArticleExtrasNav
-                postId={post.id}
-                categoryId={post.categoryId}
-                publishedAt={post.publishedAt}
-                seriesId={post.seriesId}
-              />
+              <ArticleExtrasNav {...extrasProps} />
             </Suspense>
 
             {/* Share */}
@@ -246,14 +251,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
 
             <CommentsSection articleId={post.id} />
 
-            {/* Related - STREAMED (background mein, LCP ko rokta nahi) */}
+            {/* RELATED POSTS - STREAMED (background mein) */}
             <Suspense fallback={null}>
-              <RelatedPosts
-                postId={post.id}
-                categoryId={post.categoryId}
-                publishedAt={post.publishedAt}
-                seriesId={post.seriesId}
-              />
+              <RelatedPosts {...extrasProps} />
             </Suspense>
           </div>
         </main>
@@ -264,7 +264,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
       {/* CLIENT WIDGETS: view counter + processor + playground + history */}
       <ViewCounter articleId={post.id} />
       <PostProcessor html={post.content} />
-      <CodeHighlighter />
       <TryInPlayground />
       <FeedbackWidget />
       <script dangerouslySetInnerHTML={{ __html: `try { localStorage.setItem('di_current_post', JSON.stringify({ title: ${JSON.stringify(post.title)}, url: ${JSON.stringify('/' + catSlug + '/' + post.slug)} })); } catch(e){}` }} />

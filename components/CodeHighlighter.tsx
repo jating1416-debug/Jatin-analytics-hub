@@ -40,6 +40,13 @@ function span(cls: string, text: string): string {
 }
 
 export function highlightSql(sql: string): string {
+  // SQL SPLIT FIX (Blogger feed newline kha jata hai):
+  // "-- comment SELECT ..." EK HI LINE mein aa jata hai -> tokenizer
+  // poori line comment samajhta hai -> poora query EK hi color!
+  // Fix: agar "--" ke baad UPPERCASE SQL keyword (SELECT/INSERT/UPDATE/
+  // CREATE/DROP/WITH/EXPLAIN/CALL/DECLARE/TRUNCATE/MERGE) aaye to wahan
+  // newline daal do -> comment + query alag -> colors sahi bante hain.
+  sql = sql.replace(/--[^\n]*?(?=\s+(?:SELECT|INSERT|UPDATE|CREATE|DROP|WITH|EXPLAIN|CALL|DECLARE|TRUNCATE|MERGE)\b)/g, (m) => m + '\n');
   // multi-pass tokenizer (VS Code jaisa)
   const tokens: { text: string; cls: string }[] = [];
   let i = 0;
