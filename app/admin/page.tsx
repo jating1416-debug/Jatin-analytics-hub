@@ -1,212 +1,187 @@
-import { prisma } from '@/lib/prisma';
-import Link from 'next/link';
-import StatCard from '@/components/admin/StatCard';
+'use client';
 
-export const dynamic = 'force-dynamic';
+import { useEffect, useState } from 'react';
 
-// ADMIN DASHBOARD v3 - FAST (LCP 12.81s -> ~2-3s)
-// FIX: Pehle 8-9 sequential DB queries thi (har ek pooler se ~1.4s = 12s!)
-// Ab: SIRF 3 queries:
-//   1) saari articles (light select) -> total/published/drafts/views/recent sab isi se
-//   2) categories + views per category
-//   3) comments (optional, try/catch)
-export default async function AdminDashboard() {
-  let stats = { total: 0, published: 0, drafts: 0, views: 0, categories: 0, comments: 0 };
-  let recent: any[] = [];
-  let recentComments: any[] = [];
-  let catViews: { name: string; slug: string; views: number; count: number }[] = [];
-  let dbError = false;
+// ADMIN SETTINGS - site info, AdSense, sidebar widgets, comments moderation, robots, backup
+type Settings = {
+  site: { title: string; description: string };
+  adsense: { enabled: boolean; client: string; homeSlot: string; articleSlot: string; sidebarSlot: string };
+  widgets: Record<string, boolean>;
+  comments: { moderation: boolean };
+  robotsText: string;
+};
 
-  try {
-    // ---- QUERY 1: saari articles (ek baar) - light select ----
-    const articles = await prisma.article.findMany({
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        status: true,
-        viewCount: true,
-        updatedAt: true,
-        readingTime: true,
-        category: { select: { name: true, slug: true } },
-      },
-      orderBy: { updatedAt: 'desc' },
-      take: 500,
-    });
+const DEFAULT: Settings = {
+  site: { title: 'Data Insights', description: '' },
+  adsense: { enabled: false, client: '', homeSlot: '', articleSlot: '', sidebarSlot: '' },
+  widgets: {
+    about: true, hub: true, quote: true, readingList: true, randomSaved: true,
+    toolkit: true, toolbox: true, allTools: true, categories: true, recent: true,
+    popular: true, telegram: true, portfolio: true,
+  },
+  comments: { moderation: false },
+  robotsText: '',
+};
 
-    stats.total = articles.length;
-    stats.published = articles.filter((a) => a.status === 'PUBLISHED').length;
-    stats.drafts = articles.filter((a) => a.status === 'DRAFT').length;
-    stats.views = articles.reduce((s, a) => s + a.viewCount, 0);
-    recent = articles.slice(0, 6);
+const WIDGET_LABELS: Record<string, string> = {
+  about: '👤 About (Jatin)',
+  hub: '⚡ Productivity Hub',
+  quote: '💬 Quote of the Day',
+  readingList: '🔖 Reading List',
+  randomSaved: '🎲 Random + Saved',
+  toolkit: '📦 Analyst Toolkit',
+  toolbox: '🔧 Developer Toolbox',
+  allTools: '🛠️ All Tools',
+  categories: '🗂️ Categories',
+  recent: '🕐 Recent Posts',
+  popular: '🔥 Popular Posts',
+  telegram: '📨 Telegram',
+  portfolio: '🚀 Portfolio CTA',
+};
 
-    // ---- QUERY 2: categories + views per category (ek hi call) ----
-    const cats = await prisma.category.findMany({
-      include: {
-        _count: { select: { articles: true } },
-        articles: { select: { viewCount: true } },
-      },
-    });
-    stats.categories = cats.length;
-    catViews = cats
-      .map((c) => ({
-        name: c.name,
-        slug: c.slug,
-        views: c.articles.reduce((s, a) => s + a.viewCount, 0),
-        count: c._count.articles,
-      }))
-      .sort((a, b) => b.views - a.views)
-      .slice(0, 6);
+export default function AdminSettings() {
+  const [s, setS] = useState<Settings>(DEFAULT);
+  const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [backupLoading, setBackupLoading] = useState(false);
 
-    // ---- QUERY 3: comments (table pending ho to gracefully skip) ----
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((r) => r.json())
+      .then((d) => { if (d) setS({ ...DEFAULT, ...d }); })
+      .catch(() => {});
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    setMsg(null);
     try {
-      stats.comments = await prisma.comment.count();
-      recentComments = await prisma.comment.findMany({
-        include: { article: { select: { title: true, slug: true, category: { select: { slug: true } } } } },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(s),
       });
-    } catch (e) {
-      console.error('comments not available (prisma db push pending):', e);
-    }
-  } catch (e) {
-    dbError = true;
-    console.error('Admin dashboard DB error:', e);
-  }
+      const d = await res.json();
+      if (res.ok) setMsg({ type: 'ok', text: '✅ Settings saved!' });
+      else setMsg({ type: 'err', text: d.error || 'Save fail' });
+    } catch { setMsg({ type: 'err', text: 'Network error' }); }
+    finally { setSaving(false); }
+  };
 
-  if (dbError) {
-    return (
-      <div className="category-empty" style={{ display: 'block' }}>
-        <p>⚠️ Database se connect nahi ho paya.</p>
-        <p style={{ fontSize: '0.8rem' }}>DATABASE_URL check karo — Supabase paused? Pooler URL?</p>
-      </div>
-    );
-  }
+  const exportBackup = async () => {
+    setBackupLoading(true);
+    try {
+      const res = await fetch('/api/export');
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `data-insights-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setMsg({ type: 'ok', text: '✅ Backup download ho gaya!' });
+    } catch { setMsg({ type: 'err', text: 'Backup fail' }); }
+    finally { setBackupLoading(false); }
+  };
 
-  const maxCatViews = Math.max(1, ...catViews.map((c) => c.views));
-  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const inp: React.CSSProperties = {
+    width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10,
+    background: 'var(--bg)', color: 'var(--text-dark)', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box',
+  };
+  const lbl: React.CSSProperties = { display: 'block', fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-light)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.4px' };
 
   return (
     <>
-      {/* WELCOME HEADER */}
       <div className="admin-page-head">
         <div>
-          <h1>📊 Dashboard</h1>
-          <p className="admin-page-sub">Welcome back, Jatin — aaj ka overview {today}</p>
+          <h1>⚙️ Settings</h1>
+          <p className="admin-page-sub">Site info, AdSense, sidebar widgets, comments, robots — sab yahin se</p>
         </div>
-        <Link href="/admin/articles/new" className="admin-cta-btn">
-          <i className="fas fa-plus" /> New Article
-        </Link>
+        <button className="admin-cta-btn" onClick={save} disabled={saving} style={{ border: 'none', cursor: 'pointer' }}>
+          {saving ? <><i className="fas fa-spinner fa-spin" /> Saving...</> : <><i className="fas fa-save" /> Save Settings</>}
+        </button>
       </div>
 
-      {/* STAT CARDS */}
-      <div className="admin-stats-grid">
-        <StatCard label="Total Articles" value={stats.total} icon="fa-file-lines" grad="linear-gradient(135deg,#4f46e5,#7c3aed)" />
-        <StatCard label="Published" value={stats.published} icon="fa-circle-check" grad="linear-gradient(135deg,#10b981,#059669)" />
-        <StatCard label="Drafts" value={stats.drafts} icon="fa-pen" grad="linear-gradient(135deg,#f59e0b,#d97706)" />
-        <StatCard label="Total Views" value={stats.views} icon="fa-eye" grad="linear-gradient(135deg,#06b6d4,#0891b2)" />
-        <StatCard label="Categories" value={stats.categories} icon="fa-folder-tree" grad="linear-gradient(135deg,#f43f5e,#e11d48)" />
-        <StatCard label="Comments" value={stats.comments} icon="fa-comments" grad="linear-gradient(135deg,#8b5cf6,#6d28d9)" hint={stats.comments === 0 ? 'npx prisma db push ke baad live' : undefined} />
-      </div>
-
-      {/* QUICK ACTIONS */}
-      <div className="admin-quick-actions">
-        <Link href="/admin/articles" className="admin-quick-btn"><i className="fas fa-file-lines" /> Manage Articles</Link>
-        <Link href="/admin/categories" className="admin-quick-btn"><i className="fas fa-folder-tree" /> Categories</Link>
-        <Link href="/admin/analytics" className="admin-quick-btn"><i className="fas fa-chart-line" /> Analytics</Link>
-        <Link href="/admin/articles/new" className="admin-quick-btn primary"><i className="fas fa-pen-to-square" /> Write New Post</Link>
-      </div>
+      {msg && <p className={`admin-msg ${msg.type === 'ok' ? 'ok' : 'err'}`}>{msg.text}</p>}
 
       <div className="admin-dash-grid">
-        {/* RECENTLY UPDATED */}
+        {/* SITE INFO */}
         <div className="admin-panel">
-          <div className="admin-panel-head">
-            <h2><i className="fas fa-clock-rotate-left" /> Recently Updated</h2>
-            <Link href="/admin/articles" className="admin-panel-link">View all <i className="fas fa-arrow-right" /></Link>
+          <div className="admin-panel-head"><h2><i className="fas fa-globe" /> Site Info</h2></div>
+          <label style={lbl}>Site Title</label>
+          <input style={inp} value={s.site.title} onChange={(e) => setS({ ...s, site: { ...s.site, title: e.target.value } })} />
+          <div style={{ height: 10 }} />
+          <label style={lbl}>Site Description</label>
+          <textarea style={{ ...inp, minHeight: 70 }} value={s.site.description} onChange={(e) => setS({ ...s, site: { ...s.site, description: e.target.value } })} />
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-light)', marginTop: 6 }}>
+            📌 Ye footer aur SEO description mein use hota hai.
           </div>
-          {recent.length === 0 ? (
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-light)', padding: 10 }}>
-              Abhi koi article nahi — <Link href="/admin/articles/new">nayi post banao</Link>!
-            </p>
-          ) : (
-            <div className="admin-list">
-              {recent.map((a, i) => (
-                <Link key={a.id} href={`/admin/articles/${a.id}/edit`} className="admin-list-row">
-                  <span className="admin-list-rank">{i + 1}</span>
-                  <span className="admin-list-title">{a.title.slice(0, 60)}</span>
-                  {a.category && <span className="admin-chip">{a.category.name}</span>}
-                  <span className={`admin-status-pill ${a.status === 'PUBLISHED' ? 'pub' : 'draft'}`}>
-                    {a.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT'}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* VIEWS PER CATEGORY */}
+        {/* ADSENSE */}
         <div className="admin-panel">
           <div className="admin-panel-head">
-            <h2><i className="fas fa-chart-simple" /> Views by Category</h2>
+            <h2><i className="fas fa-dollar-sign" /> AdSense (Monetization)</h2>
           </div>
-          {catViews.length === 0 ? (
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-light)', padding: 10 }}>Abhi data nahi.</p>
-          ) : (
-            <div className="admin-bars">
-              {catViews.map((c) => (
-                <div key={c.slug} className="admin-bar-row">
-                  <span className="admin-bar-label">{c.name}</span>
-                  <div className="admin-bar-track">
-                    <div className="admin-bar-fill" style={{ width: `${Math.max(4, (c.views / maxCatViews) * 100)}%` }} />
-                  </div>
-                  <span className="admin-bar-value">{c.views.toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, cursor: 'pointer', fontSize: '0.88rem', fontWeight: 700 }}>
+            <input type="checkbox" checked={s.adsense.enabled} onChange={(e) => setS({ ...s, adsense: { ...s.adsense, enabled: e.target.checked } })} />
+            Ads enable karo (AdSense approval ke baad)
+          </label>
+          <label style={lbl}>AdSense Client ID</label>
+          <input style={inp} value={s.adsense.client} onChange={(e) => setS({ ...s, adsense: { ...s.adsense, client: e.target.value } })} placeholder="ca-pub-XXXXXXXXXXXXXXXX" />
+          <div style={{ height: 10 }} />
+          <label style={lbl}>Home Page Ad Slot ID</label>
+          <input style={inp} value={s.adsense.homeSlot} onChange={(e) => setS({ ...s, adsense: { ...s.adsense, homeSlot: e.target.value } })} placeholder="1234567890" />
+          <div style={{ height: 10 }} />
+          <label style={lbl}>Article Page Ad Slot ID</label>
+          <input style={inp} value={s.adsense.articleSlot} onChange={(e) => setS({ ...s, adsense: { ...s.adsense, articleSlot: e.target.value } })} placeholder="1234567890" />
+          <div style={{ height: 10 }} />
+          <label style={lbl}>Sidebar Ad Slot ID</label>
+          <input style={inp} value={s.adsense.sidebarSlot} onChange={(e) => setS({ ...s, adsense: { ...s.adsense, sidebarSlot: e.target.value } })} placeholder="1234567890" />
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-light)', marginTop: 8, lineHeight: 1.6 }}>
+            📌 Google AdSense → <b>My ads</b> → naya ad banate waqt <b>slot ID</b> milta hai (numbers).
+            Client ID = ca-pub- wala. Sab fill karke Save karo — ads turant dikhne lageinge (async load, site slow nahi hoga).
+          </div>
         </div>
 
-        {/* RECENT COMMENTS */}
+        {/* COMMENTS + ROBOTS */}
         <div className="admin-panel">
-          <div className="admin-panel-head">
-            <h2><i className="fas fa-comments" /> Recent Comments</h2>
-            {stats.comments === 0 && <span className="admin-chip">table pending</span>}
+          <div className="admin-panel-head"><h2><i className="fas fa-comments" /> Comments</h2></div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer', fontSize: '0.88rem', fontWeight: 700 }}>
+            <input type="checkbox" checked={s.comments.moderation} onChange={(e) => setS({ ...s, comments: { moderation: e.target.checked } })} />
+            Moderation ON (naye comments pehle pending — aap approve karo)
+          </label>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-light)', lineHeight: 1.6 }}>
+            OFF = comments turant dikhte hain. ON = admin → Comments mein approve karna padega.
           </div>
-          {stats.comments === 0 ? (
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-light)', padding: 10, lineHeight: 1.7 }}>
-              Comment table abhi nahi bani hai. Project folder mein ek baar chalao:<br />
-              <code style={{ background: 'var(--bg)', padding: '3px 8px', borderRadius: 6, fontSize: '0.78rem' }}>npx prisma db push</code>
-            </p>
-          ) : recentComments.length === 0 ? (
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-light)', padding: 10 }}>Abhi koi comment nahi aaya.</p>
-          ) : (
-            <div className="admin-list">
-              {recentComments.map((c) => (
-                <div key={c.id} className="admin-comment-row">
-                  <span className="admin-comment-avatar">💬</span>
-                  <div className="admin-comment-body">
-                    <div className="admin-comment-top">
-                      <b>{c.name}</b>
-                      <span className="admin-comment-date">
-                        {new Date(c.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                      </span>
-                    </div>
-                    <div className="admin-comment-text">{c.content.slice(0, 90)}{c.content.length > 90 ? '…' : ''}</div>
-                    {c.article && (
-                      <a
-                        className="admin-comment-link"
-                        href={`/${c.article.category?.slug || 'post'}/${c.article.slug}`}
-                        target="_blank"
-                        rel="noopener"
-                      >
-                        on: {c.article.title.slice(0, 40)}
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div style={{ height: 16 }} />
+          <div className="admin-panel-head"><h2><i className="fas fa-robot" /> Robots.txt Custom</h2></div>
+          <textarea style={{ ...inp, minHeight: 90, fontFamily: "'Fira Code', monospace", fontSize: '0.78rem' }} value={s.robotsText} onChange={(e) => setS({ ...s, robotsText: e.target.value })} placeholder="Khali chhodo — default: User-agent: * allow / disallow /admin" />
+        </div>
+
+        {/* WIDGET TOGGLES */}
+        <div className="admin-panel">
+          <div className="admin-panel-head"><h2><i className="fas fa-toggle-on" /> Sidebar Widgets</h2></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            {Object.keys(WIDGET_LABELS).map((k) => (
+              <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', padding: '5px 0' }}>
+                <input type="checkbox" checked={!!s.widgets[k]} onChange={(e) => setS({ ...s, widgets: { ...s.widgets, [k]: e.target.checked } })} />
+                {WIDGET_LABELS[k]}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* BACKUP */}
+        <div className="admin-panel">
+          <div className="admin-panel-head"><h2><i className="fas fa-database" /> Backup & Export</h2></div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-light)', lineHeight: 1.7, marginBottom: 14 }}>
+            Saara data (articles, categories, tags, comments, pages, settings) ek JSON file mein
+            download karo. Restore ke liye file ko maine bata diya tha — CLI script se ho jaata hai.
+          </p>
+          <button className="admin-cta-btn" onClick={exportBackup} disabled={backupLoading} style={{ border: 'none', cursor: 'pointer' }}>
+            {backupLoading ? <><i className="fas fa-spinner fa-spin" /> Bana rahe hain...</> : <><i className="fas fa-download" /> Download Backup (JSON)</>}
+          </button>
         </div>
       </div>
     </>

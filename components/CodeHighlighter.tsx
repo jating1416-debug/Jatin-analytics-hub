@@ -20,9 +20,9 @@ const C = {
   idn: '#9CDCFE',  // light blue - identifiers (column names)
 };
 
-const SQL_KW = 'SELECT|FROM|WHERE|GROUP|BY|ORDER|HAVING|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|ON|AND|OR|NOT|NULL|IS|AS|DISTINCT|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|ALTER|DROP|INDEX|IF|EXISTS|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|DEFAULT|CHECK|UNIQUE|CASE|WHEN|THEN|ELSE|END|LIKE|IN|BETWEEN|UNION|ALL|ASC|DESC|WITH|RECURSIVE|OVER|PARTITION|EXPLAIN|ANALYZE|COLLATE|CAST|USING|NATURAL';
+const SQL_KW = 'SELECT|FROM|WHERE|GROUP|BY|ORDER|HAVING|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|ON|AND|OR|NOT|NULL|IS|AS|DISTINCT|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|ALTER|DROP|INDEX|IF|EXISTS|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|DEFAULT|CHECK|UNIQUE|CASE|WHEN|THEN|ELSE|END|LIKE|IN|BETWEEN|UNION|ALL|ASC|DESC|WITH|RECURSIVE|OVER|PARTITION|EXPLAIN|ANALYZE|COLLATE|CAST|USING|NATURAL|ROWS|RANGE|UNBOUNDED|PRECEDING|FOLLOWING|CURRENT|ROW|GROUPS|EXCLUDE|TIES|ASC|DESC|FETCH|FIRST|NEXT|ONLY|FROM|FULL|OUTER';
 
-const SQL_FN = 'COUNT|SUM|AVG|MIN|MAX|ROUND|COALESCE|NULLIF|CONCAT|SUBSTR|LENGTH|UPPER|LOWER|TRIM|REPLACE|YEAR|MONTH|DAY|NOW|CURRENT_DATE|CURRENT_TIMESTAMP|strftime|RANK|DENSE_RANK|ROW_NUMBER|LAG|LEAD|FIRST_VALUE|LAST_VALUE|NTILE|ROW_NUMBER|ABS|CEIL|FLOOR|MOD|POWER|SQRT|DATE|CURRENT_TIME';
+const SQL_FN = 'COUNT|SUM|AVG|MIN|MAX|ROUND|COALESCE|NULLIF|CONCAT|SUBSTR|LENGTH|UPPER|LOWER|TRIM|REPLACE|YEAR|MONTH|DAY|NOW|CURRENT_DATE|CURRENT_TIMESTAMP|strftime|RANK|DENSE_RANK|ROW_NUMBER|LAG|LEAD|FIRST_VALUE|LAST_VALUE|NTH_VALUE|NTILE|CUME_DIST|PERCENT_RANK|ABS|CEIL|FLOOR|MOD|POWER|SQRT|DATE|CURRENT_TIME';
 
 const PY_KW = 'def|class|import|from|return|if|elif|else|for|while|break|continue|pass|with|as|try|except|finally|raise|lambda|yield|global|nonlocal|None|True|False|and|or|not|in|is|del|assert|async|await|self';
 
@@ -40,13 +40,14 @@ function span(cls: string, text: string): string {
 }
 
 export function highlightSql(sql: string): string {
-  // SQL SPLIT FIX (Blogger feed newline kha jata hai):
-  // "-- comment SELECT ..." EK HI LINE mein aa jata hai -> tokenizer
-  // poori line comment samajhta hai -> poora query EK hi color!
-  // Fix: agar "--" ke baad UPPERCASE SQL keyword (SELECT/INSERT/UPDATE/
-  // CREATE/DROP/WITH/EXPLAIN/CALL/DECLARE/TRUNCATE/MERGE) aaye to wahan
-  // newline daal do -> comment + query alag -> colors sahi bante hain.
-  sql = sql.replace(/--[^\n]*?(?=\s+(?:SELECT|INSERT|UPDATE|CREATE|DROP|WITH|EXPLAIN|CALL|DECLARE|TRUNCATE|MERGE)\b)/g, (m) => m + '\n');
+  // FIX (Blogger feed): "-- comment SELECT ..." EK HI LINE mein aata hai
+  // (newlines kha gayi feed) -> tokenizer poora query comment samajhta tha
+  // -> SAB SAME COLOR. Ab comment ke baad UPPERCASE SQL keyword aaye to
+  // newline daalo. (case-sensitive: "-- Show..." mein Show split nahi hoga)
+  try {
+    sql = sql.replace(/(--[^\n]*?)\s+(?=(?:SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|WITH|EXPLAIN|CALL|DECLARE|TRUNCATE|MERGE)\b)/g, '$1\n');
+  } catch (e) { /* koi baat nahi - raw hi chalao */ }
+
   // multi-pass tokenizer (VS Code jaisa)
   const tokens: { text: string; cls: string }[] = [];
   let i = 0;

@@ -105,6 +105,20 @@ export function normalizeContentServer(html: string): string {
       bi += 1;
       return h || '';
     });
+
+    // 6) "text" GARBAGE CLEANUP (Blogger feed artifact):
+    //    har code block ke baad ek akela "text" line aata hai — hatao
+    //    (pattern har jagah same hai: </code></pre> ke baad akela text line)
+    out = out.replace(/<\/code>\s*<\/pre>\s*\n?\s*text\s*\n?/gi, '</code></pre>\n');
+
+    // 7) PRE BLOCKS: inline style hatao (white-space:pre-wrap waghera)
+    //    -> ASCII tables (| col | col |) columns ALIGNED rahenge
+    //    -> CSS .post-body pre white-space:pre + overflow-x:auto jeetega
+    out = out.replace(/<pre([^>]*)>/gi, (m, attrs: string) => {
+      // style attribute sirf hatao, baaki rakho
+      const kept = attrs.replace(/\s*style\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+      return `<pre${kept}>`;
+    });
   } catch (e) {
     console.error('normalizeContentServer error (safely ignored):', e);
   }

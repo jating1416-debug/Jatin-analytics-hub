@@ -1,6 +1,6 @@
 import { notFound, permanentRedirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { cache } from 'react';
+import { cache, Suspense } from 'react';
 import { prisma } from '@/lib/prisma';
 import TableOfContents from '@/components/TableOfContents';
 import SidebarClient from '@/components/SidebarClient';
@@ -15,15 +15,38 @@ import FocusModeButton from '@/components/FocusModeButton';
 import TldrBox from '@/components/TldrBox';
 import HeadingLinks from '@/components/HeadingLinks';
 import AdSlots from '@/components/AdSlots';
+import CodeHighlighter from '@/components/CodeHighlighter';
+import ArticleExtrasNav, { RelatedPosts } from '@/components/ArticleExtras';
+import { normalizeContentServer } from '@/lib/post-transform';
 import { SITE_URL, formatDate, excerptFrom } from '@/lib/utils';
 
-// ARTICLE PAGE v2 - FAST (ISR 60s):
-// - metadata + page EK hi DB query (React cache)
-// - related/prev/next = sirf 2 queries (pehle 4-5 thi)
-// - Views SIRF client (ViewCounter) se count hote hain - server pe double count nahi
-// - 60 sec CDN cache -> repeat visits INSTANT
+// ARTICLE PAGE v4 - LCP FAST + CRASH-PROOF:
+// - metadata + page EK hi DB query (React cache) - critical path SIRF 1 query
+// - h1 + content TURANT stream (related/series ab Suspense mein background mein)
+//   -> LCP 5.7s se ~1-2s (title ke liye ab koi extra DB wait nahi)
+// - Views SIRF client (ViewCounter) se count hote hain
+// - 5 min CDN cache -> repeat visits INSTANT
+// - maxDuration 60 -> Vercel 504 kabhi nahi
 
 export const revalidate = 300; // 5 min cache - post fast kholo
+export const maxDuration = 60; // Vercel function limit 60s (Hobby max)
+
+// LCP FIX: latest 30 posts BUILD TIME pe static pre-render ho jaate hain
+// -> pehli visit bhi CDN se INSTANT (DB hit nahi). Nayi posts on-demand.
+export async function generateStaticParams() {
+  try {
+    const posts = await prisma.article.findMany({
+      where: { status: 'PUBLISHED' },
+      select: { slug: true, category: { select: { slug: true } } },
+      orderBy: { publishedAt: 'desc' },
+      take: 30,
+    });
+    return posts.map((p) => ({ category: p.category?.slug || 'post', slug: p.slug }));
+  } catch (e) {
+    console.error('generateStaticParams error (build pe DB na ho to dynamic):', e);
+    return [];
+  }
+}
 
 const getPost = cache(async (slug: string) => {
   return prisma.article.findUnique({
@@ -111,45 +134,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
   const catSlug = post.category?.slug || 'post';
   const url = `${SITE_URL}/${catSlug}/${post.slug}`;
 
-  // RELATED + PREV/NEXT - SIRF 2 QUERIES (fast!)
-  let related: any[] = [];
-  let prevPost: any = null;
-  let nextPost: any = null;
-  try {
-    // prev + related: same category, purani posts (4 sabse paas wali)
-    const older = await prisma.article.findMany({
-      where: { status: 'PUBLISHED', categoryId: post.categoryId, publishedAt: { lt: post.publishedAt || new Date() } },
-      include: { category: true },
-      orderBy: { publishedAt: 'desc' },
-      take: 4,
-    });
-    prevPost = older[0] || null;
-    related = older.slice(1, 4);
-
-    // next: same category, nayi post (sirf 1)
-    nextPost = await prisma.article.findFirst({
-      where: { status: 'PUBLISHED', categoryId: post.categoryId, publishedAt: { gt: post.publishedAt || new Date() } },
-      include: { category: true },
-      orderBy: { publishedAt: 'asc' },
-    });
-  } catch (e) { console.error('related error:', e); }
-
-  // SERIES - saare parts + prev/next in series
-  let seriesParts: any[] = [];
-  let seriesPrev: any = null;
-  let seriesNext: any = null;
-  if (post.seriesId) {
-    try {
-      seriesParts = await prisma.article.findMany({
-        where: { status: 'PUBLISHED', seriesId: post.seriesId },
-        include: { category: true },
-        orderBy: [{ seriesOrder: 'asc' }, { publishedAt: 'desc' }],
-      });
-      const idx = seriesParts.findIndex((x: any) => x.id === post.id);
-      if (idx > 0) seriesPrev = seriesParts[idx - 1];
-      if (idx >= 0 && idx < seriesParts.length - 1) seriesNext = seriesParts[idx + 1];
-    } catch (e) { console.error('series parts error:', e); }
-  }
+  // extras (prev/next/series/related) ab Suspense mein stream hote hain -
+  // yahan koi DB query nahi => h1 + content TURANT render (LCP fast)
 
   return (
     <>
@@ -213,7 +199,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
             <div
               className="post-body entry-content"
               style={{ fontSize: '1rem', lineHeight: 1.8, color: 'var(--text-light)' }}
-              dangerouslySetInnerHTML={{ __html: post.content }}
+              dangerouslySetInnerHTML={{ __html: normalizeContentServer(post.content) }}
             />
 
             <AdSlots position="article" />
@@ -238,54 +224,15 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
               </div>
             </div>
 
-            {/* Prev / Next */}
-            <div className="post-nav" style={{ display: 'flex', justifyContent: 'space-between', gap: 14, margin: '30px 0 10px', flexWrap: 'wrap' }}>
-              {prevPost && (
-                <a className="post-nav-link" href={`/${prevPost.category?.slug || 'post'}/${prevPost.slug}`} style={{ flex: 1, background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', textDecoration: 'none' }}>
-                  <span className="post-nav-label" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 6 }}><i className="fas fa-arrow-left" /> Previous Article</span>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-dark)' }}>{prevPost.title.slice(0, 60)}</span>
-                </a>
-              )}
-              {nextPost && (
-                <a className="post-nav-link" href={`/${nextPost.category?.slug || 'post'}/${nextPost.slug}`} style={{ flex: 1, background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', textDecoration: 'none', textAlign: 'right' }}>
-                  <span className="post-nav-label" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 6 }}>Next Article <i className="fas fa-arrow-right" /></span>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-dark)' }}>{nextPost.title.slice(0, 60)}</span>
-                </a>
-              )}
-            </div>
-
-            {/* SERIES NAVIGATION */}
-            {seriesParts.length > 1 && (
-              <div className="series-nav" style={{ marginTop: 24 }}>
-                <div className="series-nav-head">
-                  <i className="fas fa-list-ol" /> Series: {post.series?.title}
-                </div>
-                <div className="series-nav-parts">
-                  {seriesParts.map((sp, i) => (
-                    <a
-                      key={sp.id}
-                      href={`/${sp.category?.slug || 'post'}/${sp.slug}`}
-                      className={`series-nav-part${sp.id === post.id ? ' current' : ''}`}
-                      title={sp.title}
-                    >
-                      {sp.seriesOrder || i + 1}
-                    </a>
-                  ))}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-                  {seriesPrev ? (
-                    <a href={`/${seriesPrev.category?.slug || 'post'}/${seriesPrev.slug}`} className="series-nav-link">
-                      <i className="fas fa-arrow-left" /> Part {seriesPrev.seriesOrder}: {seriesPrev.title.slice(0, 40)}
-                    </a>
-                  ) : <span />}
-                  {seriesNext ? (
-                    <a href={`/${seriesNext.category?.slug || 'post'}/${seriesNext.slug}`} className="series-nav-link">
-                      Part {seriesNext.seriesOrder}: {seriesNext.title.slice(0, 40)} <i className="fas fa-arrow-right" />
-                    </a>
-                  ) : <span />}
-                </div>
-              </div>
-            )}
+            {/* Prev / Next + Series - STREAMED (LCP ke liye title pehle) */}
+            <Suspense fallback={null}>
+              <ArticleExtrasNav
+                postId={post.id}
+                categoryId={post.categoryId}
+                publishedAt={post.publishedAt}
+                seriesId={post.seriesId}
+              />
+            </Suspense>
 
             {/* Share */}
             <div className="share-buttons" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 20, paddingTop: 18, borderTop: '2px solid var(--border)', flexWrap: 'wrap' }}>
@@ -299,23 +246,15 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
 
             <CommentsSection articleId={post.id} />
 
-            {related.length > 0 && (
-              <div className="related-posts" style={{ marginTop: 30 }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 20 }}>
-                  📚 More Articles Like This
-                </h3>
-                <div className="related-posts-grid">
-                  {related.map((r) => (
-                    <a key={r.id} className="related-post-card" href={`/${r.category?.slug || 'post'}/${r.slug}`} style={{ textDecoration: 'none' }}>
-                      <div className="related-post-card-body">
-                        <h4>{r.title}</h4>
-                        <div className="related-post-card-meta" style={{ color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 700 }}><i className="fas fa-arrow-right" /> Read Article</div>
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Related - STREAMED (background mein, LCP ko rokta nahi) */}
+            <Suspense fallback={null}>
+              <RelatedPosts
+                postId={post.id}
+                categoryId={post.categoryId}
+                publishedAt={post.publishedAt}
+                seriesId={post.seriesId}
+              />
+            </Suspense>
           </div>
         </main>
 
@@ -325,6 +264,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ catego
       {/* CLIENT WIDGETS: view counter + processor + playground + history */}
       <ViewCounter articleId={post.id} />
       <PostProcessor html={post.content} />
+      <CodeHighlighter />
       <TryInPlayground />
       <FeedbackWidget />
       <script dangerouslySetInnerHTML={{ __html: `try { localStorage.setItem('di_current_post', JSON.stringify({ title: ${JSON.stringify(post.title)}, url: ${JSON.stringify('/' + catSlug + '/' + post.slug)} })); } catch(e){}` }} />

@@ -5659,28 +5659,36 @@ body.dark-mode .post-body table tbody tr:nth-child(even) td {
 body:has(.route-loading-overlay) .footer { display: none !important; }
 
 /* ============================================================
-   CODE BLOCK VS CODE DARK+ THEME (FINAL - sabse end mein)
-   Pehle background inline style se aata tha (Blogger) jo content
-   fix mein strip hua -> ab CSS se dark background pakka!
-   - CodeHighlighter colors (blue keywords, yellow functions,
-     green comments) inhi pe saaf dikhte hain
-   - Theme toggle button (🌙/☀️) .code-light class lagata hai
-============================================================ */
-.post-body pre {
-  background: #1e1e1e !important;      /* VS Code Dark+ background */
-  color: #d4d4d4 !important;           /* VS Code default text */
-  border-radius: 8px;
-  border: 1px solid #333;
-  padding: 14px 16px;
+   TABLE OVERFLOW FINAL FIX - "aage piche" khatam
+   Problem: purani .entry-content table rule display:table!important
+   + overflow:hidden!important thi -> tables 200-400px bahar nikal
+   kar CUT ho jaati thin. Ye rule !important se override karta hai:
+   table block + width 100% + horizontal scroll (kabhi cut nahi).
+   ============================================================ */
+.post-body table,
+.entry-content table,
+.post-content-wrapper table {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+  margin: 22px 0 !important;
+  table-layout: auto !important;
+  white-space: normal !important;
 }
-.post-body pre code {
-  color: #d4d4d4 !important;
-  background: transparent !important;
+.post-body table th,
+.entry-content table th,
+.post-content-wrapper table th {
+  white-space: nowrap !important;
 }
-/* Light theme toggle (CodeHighlighter ka 🌙/☀️ button) */
-.post-body pre.code-light {
-  background: #f6f8fa !important;
-  color: #1e293b !important;
-  border-color: #d7dde8 !important;
+.post-body table td,
+.entry-content table td,
+.post-content-wrapper table td {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  min-width: 0 !important;
 }
-.post-body pre.code-light code { color: inherit !important; }
