@@ -1,40 +1,120 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { isAdmin } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { slugify, readingTime, excerptFrom } from '@/lib/utils';
+import { revalidatePath } from 'next/cache';
 
-// GET /api/articles/:id/revisions - pichle versions (admin)
-// POST /api/articles/:id/revisions { revisionId } - purana version restore (admin)
+// GET /api/articles/:id
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!(await isAdmin())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
-  try {
-    const revisions = await prisma.articleRevision.findMany({
-      where: { articleId: Number(id) },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-    });
-    return NextResponse.json({ revisions });
-  } catch { return NextResponse.json({ revisions: [] }); }
+  const article = await prisma.article.findUnique({
+    where: { id: Number(id) },
+    include: { category: true, tags: { include: { tag: true } } },
+  });
+  if (!article) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  return NextResponse.json(article);
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// PUT /api/articles/:id  { title, content, categoryId, status, tags?, featured?, ... }
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!(await isAdmin())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { id } = await params;
   try {
+    const { id } = await params;
     const body = await req.json();
-    const rev = await prisma.articleRevision.findUnique({ where: { id: Number(body?.revisionId) } });
-    if (!rev || rev.articleId !== Number(id)) return NextResponse.json({ error: 'Revision nahi mili' }, { status: 404 });
-    // purana version article pe restore
+    const articleId = Number(id);
+
+    const existing = await prisma.article.findUnique({ where: { id: articleId } });
+    if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    const title = String(body.title ?? existing.title).trim();
+    const content = String(body.content ?? existing.content).trim();
+    const categoryId = body.categoryId ? Number(body.categoryId) : existing.categoryId;
+
+    let slug = existing.slug;
+    const newSlug = body.slug ? String(body.slug).trim() : slugify(title);
+    if (newSlug !== slug) {
+      const dup = await prisma.article.findFirst({ where: { slug: newSlug, id: { not: articleId } } });
+      if (!dup) slug = newSlug;
+    }
+
+    const wasPublished = existing.status === 'PUBLISHED';
+    const newStatus = body.status || existing.status;
+    const publishNow = !wasPublished && newStatus === 'PUBLISHED';
+
+    // tags update
+    let tagConnects: { tagId: number }[] | undefined;
+    if (Array.isArray(body.tags)) {
+      const tagNames = body.tags.map(String).filter(Boolean).slice(0, 10);
+      tagConnects = await Promise.all(
+        tagNames.map(async (name: string) => {
+          const tagSlug = slugify(name) || 'tag';
+          const tag = await prisma.tag.upsert({
+            where: { slug: tagSlug },
+            update: {},
+            create: { name: name.slice(0, 60), slug: tagSlug },
+          });
+          return { tagId: tag.id };
+        })
+      );
+      // delete old links
+      await prisma.articleTag.deleteMany({ where: { articleId } });
+    }
+
+    // REVISION HISTORY - save karo purana version (update se pehle)
+    try {
+      await prisma.articleRevision.create({
+        data: {
+          articleId,
+          title: existing.title,
+          content: existing.content,
+          excerpt: existing.excerpt,
+        },
+      });
+    } catch (e) { console.error('revision save error:', e); }
+
     const article = await prisma.article.update({
-      where: { id: Number(id) },
-      data: { title: rev.title, content: rev.content, ...(rev.excerpt ? { excerpt: rev.excerpt } : {}) },
+      where: { id: articleId },
+      data: {
+        title: title.slice(0, 300),
+        slug,
+        excerpt: body.excerpt !== undefined ? body.excerpt : excerptFrom(content, 220),
+        content,
+        contentType: body.contentType || existing.contentType,
+        difficulty: body.difficulty || existing.difficulty,
+        coverImage: body.coverImage !== undefined ? body.coverImage : existing.coverImage,
+        ogImage: body.ogImage !== undefined ? body.ogImage : existing.ogImage,
+        readingTime: readingTime(content),
+        categoryId,
+        status: newStatus,
+        ...(body.scheduledAt !== undefined ? { scheduledAt: body.scheduledAt ? new Date(body.scheduledAt) : null } : {}),
+        ...(body.noindex !== undefined ? { noindex: !!body.noindex } : {}),
+        ...(body.seriesId !== undefined ? { seriesId: body.seriesId ? Number(body.seriesId) : null } : {}),
+        ...(body.seriesOrder !== undefined ? { seriesOrder: body.seriesOrder ? Number(body.seriesOrder) : null } : {}),
+        featured: body.featured !== undefined ? !!body.featured : existing.featured,
+        ...(tagConnects ? { tags: { create: tagConnects } } : {}),
+        ...(publishNow ? { publishedAt: new Date(), scheduledAt: null } : {}),
+      },
     });
-    // restore se pehle ab wala version bhi save karo (history mein)
-    await prisma.articleRevision.create({
-      data: { articleId: article.id, title: article.title, content: article.content, excerpt: article.excerpt },
-    });
-    return NextResponse.json({ ok: true, article });
+    // ISR cache turant clear (category/status change turant dikhe)
+    try { revalidatePath('/', 'layout'); } catch (e) { console.error('revalidate:', e); }
+    // GSC - publish/update pe Google sitemap ping (fire & forget)
+    if (article.status === 'PUBLISHED') {
+      try {
+        const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://blog.jatinanalytics.co.in';
+        fetch(`https://www.google.com/ping?sitemap=${encodeURIComponent(SITE + '/sitemap.xml')}`, { method: 'GET' }).catch(() => {});
+      } catch {}
+    }
+    return NextResponse.json(article);
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Error' }, { status: 500 });
   }
+}
+
+// DELETE /api/articles/:id
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await isAdmin())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { id } = await params;
+  await prisma.article.delete({ where: { id: Number(id) } });
+  return NextResponse.json({ ok: true });
 }
