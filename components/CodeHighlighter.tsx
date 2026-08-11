@@ -35,7 +35,8 @@ function esc(s: string): string {
 function span(cls: string, text: string): string {
   const color = (C as any)[cls.replace('tok-', '')] || '#d4d4d4';
   const extra = cls === 'tok-kw' ? 'font-weight:600;' : cls === 'tok-com' ? 'font-style:italic;' : '';
-  return `<span class="${cls}" style="color:${color};${extra}">${esc(text)}</span>`;
+  // !important -> koi bhi CSS inhe kabhi override nahi kar sakta (VS Code look pakka)
+  return `<span class="${cls}" style="color:${color} !important;${extra}">${esc(text)}</span>`;
 }
 
 export function highlightSql(sql: string): string {

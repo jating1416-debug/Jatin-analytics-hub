@@ -49,9 +49,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Fonts + Font Awesome: NON-BLOCKING (mobile LCP fix) - FontLoader client
-            component inject karta hai media="print" trick se (render block nahi).
-            Noscript fallback sirf bina-JS browsers ke liye. */}
+        {/* Fonts + Font Awesome: NON-BLOCKING + TURANT (head parse hote hi inject).
+            display=optional -> font swap kabhi nahi -> font-CLS ZERO.
+            FontLoader client component inhe detect karke skip karta hai (same ids). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){function L(href,id){try{if(document.getElementById(id))return;var l=document.createElement('link');l.id=id;l.rel='stylesheet';l.href=href;l.media='print';l.onload=function(){l.media='all';};document.head.appendChild(l);}catch(e){}}L('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sora:wght@700;800&family=Fira+Code:wght@400&display=optional','font-gfonts');L('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css','font-fa');})();`
+          }}
+        />
+        {/* Noscript fallback sirf bina-JS browsers ke liye. */}
         <noscript>
           <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sora:wght@700;800&family=Fira+Code:wght@400&display=swap" rel="stylesheet" />
           <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />

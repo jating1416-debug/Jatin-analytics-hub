@@ -1,31 +1,14 @@
-// Premium loading state - shimmer skeletons
+// PREMIUM LOADING - FIXED OVERLAY (CLS = 0)
+// Pehle skeleton (loading.tsx) page content ke SAME POSITION pe render
+// hota tha -> content aate hi skeleton hat-ta tha -> BADA layout shift
+// (CLS 1.43!). Ab ye FIXED overlay hai (position: fixed) -> content
+// iske neeche load hota hai -> shift BILKUL ZERO.
 export default function Loading() {
   return (
-    <div className="loading-screen">
-      <div className="skel" style={{ height: 30, width: '30%', marginBottom: 20 }} />
-      <div className="post-card" style={{ marginBottom: 16 }}>
-        <div className="skel" style={{ height: 90, borderRadius: '18px 18px 0 0' }} />
-        <div className="post-body">
-          <div className="skel" style={{ height: 14, width: '40%', marginBottom: 12 }} />
-          <div className="skel" style={{ height: 22, width: '80%', marginBottom: 12 }} />
-          <div className="skel" style={{ height: 12, width: '100%' }} />
-        </div>
-      </div>
-      <div className="post-card" style={{ marginBottom: 16 }}>
-        <div className="skel" style={{ height: 90, borderRadius: '18px 18px 0 0' }} />
-        <div className="post-body">
-          <div className="skel" style={{ height: 14, width: '40%', marginBottom: 12 }} />
-          <div className="skel" style={{ height: 22, width: '75%', marginBottom: 12 }} />
-          <div className="skel" style={{ height: 12, width: '90%' }} />
-        </div>
-      </div>
-      <div className="post-card">
-        <div className="skel" style={{ height: 90, borderRadius: '18px 18px 0 0' }} />
-        <div className="post-body">
-          <div className="skel" style={{ height: 14, width: '40%', marginBottom: 12 }} />
-          <div className="skel" style={{ height: 22, width: '70%', marginBottom: 12 }} />
-          <div className="skel" style={{ height: 12, width: '85%' }} />
-        </div>
+    <div className="route-loading-overlay" aria-hidden="true">
+      <div className="route-loading-spinner">
+        <div className="spinner-ring" />
+        <span>Loading…</span>
       </div>
     </div>
   );
