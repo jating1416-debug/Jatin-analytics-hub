@@ -1,16 +1,33 @@
-import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { isAdmin } from '@/lib/auth';
 
-// Health check - UptimeRobot ke liye + DB connection test
-// /api/health -> 200 agar DB connected, 503 agar nahi
-export const dynamic = 'force-dynamic';
-
+// GET /api/health/alt-text - articles scan karo (images bina alt text)
 export async function GET() {
+  if (!(await isAdmin())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
-    await prisma.$queryRaw`SELECT 1`;
-    return NextResponse.json({ status: 'ok', db: 'connected' });
-  } catch (e) {
-    console.error('Health check DB error:', e);
-    return NextResponse.json({ status: 'error', db: 'disconnected' }, { status: 503 });
+    const articles = await prisma.article.findMany({
+      where: { status: 'PUBLISHED' },
+      select: { id: true, title: true, slug: true, category: { select: { slug: true } }, content: true },
+      take: 200,
+    });
+    const issues = articles.map((a) => {
+      const imgs = a.content.match(/<img[^>]*>/gi) || [];
+      let missingAlt = 0;
+      imgs.forEach((img) => {
+        if (!/alt\s*=/i.test(img) || /alt\s*=\s*["']\s*["']/i.test(img)) missingAlt++;
+      });
+      return {
+        articleId: a.id,
+        title: a.title,
+        url: `/${a.category?.slug || 'post'}/${a.slug}`,
+        imgCount: imgs.length,
+        missingAlt,
+      };
+    }).filter((a) => a.missingAlt > 0);
+
+    return NextResponse.json({ issues });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || 'Error', issues: [] }, { status: 500 });
   }
 }

@@ -1,47 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdmin } from '@/lib/auth';
-import { slugify } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
 
-// /api/series
-// GET  -> saari series + unke articles (admin)
-// POST -> nayi series { title, description } (admin)
+// PUT /api/series/:id { title?, description? } - update (admin)
+// DELETE /api/series/:id - delete series (articles pe asar nahi, seriesId null)
 
-export async function GET() {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!(await isAdmin())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
-    const series = await prisma.articleSeries.findMany({
-      include: {
-        articles: {
-          where: { status: 'PUBLISHED' },
-          orderBy: { seriesOrder: 'asc' },
-          select: { id: true, title: true, slug: true, category: { select: { slug: true } }, seriesOrder: true },
-        },
+    const { id } = await params;
+    const body = await req.json();
+    const series = await prisma.articleSeries.update({
+      where: { id: Number(id) },
+      data: {
+        ...(body.title ? { title: String(body.title).slice(0, 200) } : {}),
+        ...(body.description !== undefined ? { description: String(body.description).slice(0, 500) } : {}),
       },
-      orderBy: { createdAt: 'desc' },
     });
+    try { revalidatePath('/', 'layout'); } catch {}
     return NextResponse.json(series);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Error' }, { status: 500 });
-  }
+  } catch (e: any) { return NextResponse.json({ error: e.message || 'Error' }, { status: 500 }); }
 }
 
-export async function POST(req: NextRequest) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!(await isAdmin())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
-    const body = await req.json();
-    const title = String(body?.title || '').trim().slice(0, 200);
-    const description = String(body?.description || '').trim().slice(0, 500);
-    if (!title) return NextResponse.json({ error: 'Title zaroori hai' }, { status: 400 });
-    let slug = slugify(title) || 'series';
-    let exists = await prisma.articleSeries.findUnique({ where: { slug } });
-    let i = 1;
-    while (exists) { slug = slugify(title) + '-' + i; exists = await prisma.articleSeries.findUnique({ where: { slug } }); i++; }
-    const series = await prisma.articleSeries.create({ data: { title, slug, description } });
+    const { id } = await params;
+    await prisma.articleSeries.delete({ where: { id: Number(id) } });
     try { revalidatePath('/', 'layout'); } catch {}
-    return NextResponse.json(series, { status: 201 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Error' }, { status: 500 });
-  }
+    return NextResponse.json({ ok: true });
+  } catch (e: any) { return NextResponse.json({ error: e.message || 'Error' }, { status: 500 }); }
 }

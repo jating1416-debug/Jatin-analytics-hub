@@ -1,15 +1,14 @@
-// PREMIUM LOADING - FIXED OVERLAY (CLS = 0)
-// Pehle skeleton (loading.tsx) page content ke SAME POSITION pe render
-// hota tha -> content aate hi skeleton hat-ta tha -> BADA layout shift
-// (CLS 1.43!). Ab ye FIXED overlay hai (position: fixed) -> content
-// iske neeche load hota hai -> shift BILKUL ZERO.
-export default function Loading() {
+// Admin loading state
+export default function AdminLoading() {
   return (
-    <div className="route-loading-overlay" aria-hidden="true">
-      <div className="route-loading-spinner">
-        <div className="spinner-ring" />
-        <span>Loading…</span>
+    <div>
+      <div style={{ height: 30, width: '40%', background: 'var(--border)', borderRadius: 8, marginBottom: 20, opacity: 0.5 }} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} style={{ height: 90, background: 'var(--border)', borderRadius: 12, opacity: 0.4 }} />
+        ))}
       </div>
+      <div style={{ height: 200, background: 'var(--border)', borderRadius: 12, opacity: 0.3 }} />
     </div>
   );
 }
