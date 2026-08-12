@@ -28,8 +28,15 @@ export type ExtrasInput = {
 };
 
 // EK hi query set - dono components (Nav + Related) share karte hain
-export const getExtras = cache(async (input: ExtrasInput) => {
-  const { postId, categoryId, publishedAt, seriesId } = input;
+// FIX: primitive args (postId, categoryId...) -> React cache() by VALUE
+// dedupe karta hai (pehle object tha -> har call cache MISS -> queries
+// 2x chalti thin -> Supabase slow pe db-timeout error spam)
+export const getExtras = cache(async (
+  postId: number,
+  categoryId: number | null | undefined,
+  publishedAt: Date | null | undefined,
+  seriesId: number | null | undefined,
+) => {
   let related: any[] = [];
   let prevPost: any = null;
   let nextPost: any = null;
@@ -86,7 +93,7 @@ export const getExtras = cache(async (input: ExtrasInput) => {
 
 // ---------- Prev/Next + Series nav (author box ke baad) ----------
 export default async function ArticleExtrasNav(props: ExtrasInput) {
-  const { prevPost, nextPost, seriesParts, seriesPrev, seriesNext, seriesTitle } = await getExtras(props);
+  const { prevPost, nextPost, seriesParts, seriesPrev, seriesNext, seriesTitle } = await getExtras(props.postId, props.categoryId, props.publishedAt, props.seriesId);
 
   return (
     <>
@@ -144,7 +151,7 @@ export default async function ArticleExtrasNav(props: ExtrasInput) {
 
 // ---------- Related posts (comments ke baad) ----------
 export async function RelatedPosts(props: ExtrasInput) {
-  const { related } = await getExtras(props);
+  const { related } = await getExtras(props.postId, props.categoryId, props.publishedAt, props.seriesId);
 
   if (related.length === 0) return null;
 
