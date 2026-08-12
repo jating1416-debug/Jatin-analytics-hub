@@ -47,21 +47,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        {/* GOOGLE ANALYTICS GA4 - G-WLN8HKES9M (visitors tracking) */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-WLN8HKES9M" />
+        {/* GOOGLE ANALYTICS GA4 - G-WLN8HKES9M (visitors tracking)
+            PERFORMANCE FIX: script ab page load hone ke BAAD (idle pe)
+            load hota hai - LCP/TBT pe koi asar nahi, analytics waisa hi kaam karta hai */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-WLN8HKES9M', { anonymize_ip: true });`,
+            __html: `(function(){function defer(cb){if(typeof window.requestIdleCallback==='function'){window.requestIdleCallback(cb);}else{setTimeout(cb,2500);}}defer(function(){try{var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-WLN8HKES9M';document.head.appendChild(s);window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=gtag;gtag('js',new Date());gtag('config','G-WLN8HKES9M',{anonymize_ip:true});}catch(e){}});})();`,
           }}
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Fonts + Font Awesome: NON-BLOCKING + TURANT (head parse hote hi inject).
-            display=optional -> font swap kabhi nahi -> font-CLS ZERO.
-            FontLoader client component inhe detect karke skip karta hai (same ids). */}
+        {/* Google Fonts: NON-BLOCKING (media=print trick). Font Awesome ab
+            FontLoader se idle pe load hota hai (273KB mobile pe baad mein). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){function L(href,id){try{if(document.getElementById(id))return;var l=document.createElement('link');l.id=id;l.rel='stylesheet';l.href=href;l.media='print';l.onload=function(){l.media='all';};document.head.appendChild(l);}catch(e){}}L('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sora:wght@700;800&family=Fira+Code:wght@400&display=optional','font-gfonts');L('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css','font-fa');})();`
+            __html: `(function(){function L(href,id){try{if(document.getElementById(id))return;var l=document.createElement('link');l.id=id;l.rel='stylesheet';l.href=href;l.media='print';l.onload=function(){l.media='all';};document.head.appendChild(l);}catch(e){}}L('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sora:wght@700;800&family=Fira+Code:wght@400&display=optional','font-gfonts');})();`
           }}
         />
         {/* Noscript fallback sirf bina-JS browsers ke liye. */}

@@ -2947,6 +2947,17 @@
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
   }
 
+  /* MOBILE: PremiumFX animations band - content hamesha visible (hidden nahi) */
+  @media (max-width: 768px) {
+    .reveal {
+      opacity: 1 !important;
+      transform: none !important;
+      transition: none !important;
+    }
+    /* count-up pe bhi animation mat chalao - final value dikhao */
+    .count-up { animation: none !important; }
+  }
+
   /* shimmer skeleton */
   .skel {
     position: relative;

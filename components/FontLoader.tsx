@@ -2,14 +2,11 @@
 
 import { useEffect } from 'react';
 
-// FONT LOADER v6 - LCP FIX + MOBILE FAST
-// Problem: v5 fonts ko window.load ke baad load karta tha -> gradient-clip text
-// (nav-logo, hero) invisible rehta tha jab tak fonts na aayein -> LCP 4.88s!
-// Fix: fonts TURANT async inject (media="print" trick):
-//   - CSS render-block nahi karta (media=print -> non-blocking)
-//   - Fonts background mein load hote hain (mobile pe bhi fast)
-//   - Gradient text jaldi visible -> LCP ~1.5s
-// display=swap -> text kabhi invisible nahi (fallback font se)
+// FONT LOADER v7 - LCP FIX + MOBILE FAST + PERFORMANCE
+// - Google Fonts: TURANT non-blocking (media=print trick) -> text kabhi invisible nahi
+// - Font Awesome (273KB): ab IDLE pe load hota hai (page load ke baad)
+//   -> mobile pe LCP/TBT pe koi bhaar nahi, icons 1-2 sec baad aate hain
+// display=optional -> font swap kabhi nahi -> font-CLS ZERO
 
 const FONTS_URL = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sora:wght@700;800&family=Fira+Code:wght@400&display=optional';
 const FA_URL = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
@@ -18,14 +15,16 @@ const FA_SWAP_CSS = `@font-face{font-family:"Font Awesome 6 Free";font-style:nor
 
 export default function FontLoader() {
   useEffect(() => {
-    const inject = (href: string, id: string) => {
+    const inject = (href: string, id: string, mediaPrint = true) => {
       if (document.getElementById(id)) return;
       const link = document.createElement('link');
       link.id = id;
       link.rel = 'stylesheet';
       link.href = href;
-      link.media = 'print';
-      link.onload = () => { link.media = 'all'; };
+      if (mediaPrint) {
+        link.media = 'print';
+        link.onload = () => { link.media = 'all'; };
+      }
       document.head.appendChild(link);
     };
 
@@ -37,16 +36,20 @@ export default function FontLoader() {
       document.head.appendChild(style);
     };
 
-    // TURANT async inject (non-blocking) - fonts jaldi, render block nahi
+    // Google Fonts: TURANT (LCP ke liye - text hamesha visible)
     inject(FONTS_URL, 'font-gfonts');
-    inject(FA_URL, 'font-fa');
-    injectSwap();
 
-    // Safety: agar kuch fail ho to retry
-    setTimeout(() => {
-      inject(FONTS_URL, 'font-gfonts');
+    // FONT AWESOME: IDLE PE (page load ke baad - mobile speed ke liye)
+    const idle = (cb: () => void) => {
+      if (typeof (window as any).requestIdleCallback === 'function') (window as any).requestIdleCallback(cb);
+      else setTimeout(cb, 2500);
+    };
+    idle(() => {
       inject(FA_URL, 'font-fa');
-    }, 3000);
+      injectSwap();
+      // safety retry agar fail ho
+      setTimeout(() => inject(FA_URL, 'font-fa'), 3000);
+    });
   }, []);
 
   return null;

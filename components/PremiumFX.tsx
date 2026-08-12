@@ -3,10 +3,14 @@
 import { useEffect } from 'react';
 
 // PREMIUM FX - scroll-reveal + count-up (100% free, koi library nahi)
-// - .reveal elements viewport mein aate hi fade-up ho jaate hain
-// - .count-up elements animate hote hain
+// MOBILE PERFORMANCE: mobile pe sab band (CSS .reveal visible force
+// karta hai) - animations sirf CPU khaati hain phone pe, fayda nahi.
+// Desktop pe waisa hi chalta hai.
 export default function PremiumFX() {
   useEffect(() => {
+    // MOBILE: animations band - content CSS se visible hai
+    if (window.matchMedia('(max-width: 768px)').matches) return;
+
     // 1) SCROLL REVEAL — saare .reveal elements pe
     const revealEls = () => {
       document.querySelectorAll('.reveal:not(.revealed)').forEach((el) => {
