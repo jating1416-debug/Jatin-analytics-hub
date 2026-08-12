@@ -39,17 +39,15 @@ export default function FontLoader() {
     // Google Fonts: TURANT (LCP ke liye - text hamesha visible)
     inject(FONTS_URL, 'font-gfonts');
 
-    // FONT AWESOME: IDLE PE (page load ke baad - mobile speed ke liye)
-    const idle = (cb: () => void) => {
-      if (typeof (window as any).requestIdleCallback === 'function') (window as any).requestIdleCallback(cb);
-      else setTimeout(cb, 2500);
-    };
-    idle(() => {
+    // FONT AWESOME: 2.5s BAAD load (page load hone ke baad - mobile speed
+    // ke liye). Deterministic timer (requestIdleCallback kabhi fire na ho
+    // to icons kabhi na aayein - ye risk tha, ab pakka 2.5s pe load hoga)
+    setTimeout(() => {
       inject(FA_URL, 'font-fa');
       injectSwap();
       // safety retry agar fail ho
       setTimeout(() => inject(FA_URL, 'font-fa'), 3000);
-    });
+    }, 2500);
   }, []);
 
   return null;

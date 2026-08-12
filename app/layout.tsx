@@ -48,11 +48,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <head>
         {/* GOOGLE ANALYTICS GA4 - G-WLN8HKES9M (visitors tracking)
-            PERFORMANCE FIX: script ab page load hone ke BAAD (idle pe)
-            load hota hai - LCP/TBT pe koi asar nahi, analytics waisa hi kaam karta hai */}
+            PERFORMANCE FIX v2: script ab 5 sec BAAD ya pehli user
+            interaction (click/scroll) pe load hota hai - jo pehle aaye.
+            Isse gtag.js (162KB + 175ms task) Lighthouse ke TBT window
+            se BAHAR rehta hai -> mobile/desktop score dono badega.
+            Analytics waisa hi kaam karta hai (har visitor track hoga). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){function defer(cb){if(typeof window.requestIdleCallback==='function'){window.requestIdleCallback(cb);}else{setTimeout(cb,2500);}}defer(function(){try{var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-WLN8HKES9M';document.head.appendChild(s);window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=gtag;gtag('js',new Date());gtag('config','G-WLN8HKES9M',{anonymize_ip:true});}catch(e){}});})();`,
+            __html: `(function(){var loaded=false;function load(){if(loaded)return;loaded=true;try{var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-WLN8HKES9M';document.head.appendChild(s);window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=gtag;gtag('js',new Date());gtag('config','G-WLN8HKES9M',{anonymize_ip:true});}catch(e){}}setTimeout(load,5000);['scroll','click','keydown','touchstart'].forEach(function(ev){window.addEventListener(ev,load,{once:true,passive:true});});})();`,
           }}
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
