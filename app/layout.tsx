@@ -47,6 +47,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        {/* GOOGLE ANALYTICS GA4 - G-WLN8HKES9M (visitors tracking) */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-WLN8HKES9M" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-WLN8HKES9M', { anonymize_ip: true });`,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Fonts + Font Awesome: NON-BLOCKING + TURANT (head parse hote hi inject).
