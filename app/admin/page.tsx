@@ -1,221 +1,214 @@
-'use client';
-
+import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import StatCard from '@/components/admin/StatCard';
 
-type Article = {
-  id: number;
-  title: string;
-  slug: string;
-  status: string;
-  viewCount: number;
-  updatedAt: string;
-  category: { name: string; slug: string } | null;
-};
+export const dynamic = 'force-dynamic';
 
-// ADMIN ARTICLES v2 - premium table (sab logic same, naya design)
-export default function AdminArticlesPage() {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [q, setQ] = useState('');
-  const [status, setStatus] = useState('ALL');
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
-  const [bulkCat, setBulkCat] = useState(0);
+// ADMIN DASHBOARD v3 - FAST (LCP 12.81s -> ~2-3s)
+// FIX: Pehle 8-9 sequential DB queries thi (har ek pooler se ~1.4s = 12s!)
+// Ab: SIRF 3 queries:
+//   1) saari articles (light select) -> total/published/drafts/views/recent sab isi se
+//   2) categories + views per category
+//   3) comments (optional, try/catch)
+export default async function AdminDashboard() {
+  let stats = { total: 0, published: 0, drafts: 0, views: 0, categories: 0, comments: 0 };
+  let recent: any[] = [];
+  let recentComments: any[] = [];
+  let catViews: { name: string; slug: string; views: number; count: number }[] = [];
+  let dbError = false;
 
-  const load = async () => {
-    setLoading(true);
+  try {
+    // ---- QUERY 1: saari articles (ek baar) - light select ----
+    const articles = await prisma.article.findMany({
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        viewCount: true,
+        updatedAt: true,
+        readingTime: true,
+        category: { select: { name: true, slug: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 500,
+    });
+
+    stats.total = articles.length;
+    stats.published = articles.filter((a) => a.status === 'PUBLISHED').length;
+    stats.drafts = articles.filter((a) => a.status === 'DRAFT').length;
+    stats.views = articles.reduce((s, a) => s + a.viewCount, 0);
+    recent = articles.slice(0, 6);
+
+    // ---- QUERY 2: categories + views per category (ek hi call) ----
+    const cats = await prisma.category.findMany({
+      include: {
+        _count: { select: { articles: true } },
+        articles: { select: { viewCount: true } },
+      },
+    });
+    stats.categories = cats.length;
+    catViews = cats
+      .map((c) => ({
+        name: c.name,
+        slug: c.slug,
+        views: c.articles.reduce((s, a) => s + a.viewCount, 0),
+        count: c._count.articles,
+      }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 6);
+
+    // ---- QUERY 3: comments (table pending ho to gracefully skip) ----
     try {
-      const params = new URLSearchParams();
-      if (q) params.set('q', q);
-      if (status !== 'ALL') params.set('status', status);
-      const res = await fetch('/api/articles?' + params.toString());
-      if (res.ok) setArticles(await res.json());
-    } catch {}
-    finally { setLoading(false); }
-  };
-  useEffect(() => { load(); }, [status, q]);
-
-  useEffect(() => {
-    fetch('/api/categories')
-      .then((r) => r.json())
-      .then((d) => { if (Array.isArray(d)) setCategories(d.map((c) => ({ id: c.id, name: c.name }))); })
-      .catch(() => {});
-  }, []);
-
-  const toggle = (id: number) => {
-    const next = new Set(selected);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    setSelected(next);
-  };
-
-  const del = async (id: number) => {
-    if (!confirm('Post delete karni hai? (ye wapas nahi aayegi!)')) return;
-    const res = await fetch(`/api/articles/${id}`, { method: 'DELETE' });
-    if (res.ok) { setMsg({ type: 'ok', text: '🗑️ Post deleted' }); load(); }
-    else setMsg({ type: 'err', text: 'Delete fail' });
-  };
-
-  const bulk = async (action: 'PUBLISHED' | 'DRAFT' | 'ARCHIVED' | 'DELETE') => {
-    if (selected.size === 0) return;
-    if (action === 'DELETE' && !confirm(`${selected.size} posts delete?`)) return;
-    let ok = 0, fail = 0;
-    for (const id of selected) {
-      const res = action === 'DELETE'
-        ? await fetch(`/api/articles/${id}`, { method: 'DELETE' })
-        : await fetch(`/api/articles/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: action }),
-          });
-      if (res.ok) ok++; else fail++;
-    }
-    setMsg({ type: ok > 0 ? 'ok' : 'err', text: `✅ ${ok} done${fail ? ` | ❌ ${fail} fail` : ''}` });
-    setSelected(new Set());
-    load();
-  };
-
-  const bulkCategory = async () => {
-    if (selected.size === 0 || !bulkCat) return;
-    if (!confirm(`${selected.size} posts ki category change karni hai?`)) return;
-    let ok = 0, fail = 0;
-    for (const id of selected) {
-      const res = await fetch(`/api/articles/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categoryId: bulkCat }),
+      stats.comments = await prisma.comment.count();
+      recentComments = await prisma.comment.findMany({
+        include: { article: { select: { title: true, slug: true, category: { select: { slug: true } } } } },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
       });
-      if (res.ok) ok++; else fail++;
+    } catch (e) {
+      console.error('comments not available (prisma db push pending):', e);
     }
-    setMsg({ type: ok > 0 ? 'ok' : 'err', text: `✅ ${ok} category change${fail ? ` | ❌ ${fail} fail` : ''}` });
-    setSelected(new Set());
-    load();
-  };
+  } catch (e) {
+    dbError = true;
+    console.error('Admin dashboard DB error:', e);
+  }
 
-  const STATUS_TABS = [
-    { key: 'ALL', label: 'All' },
-    { key: 'PUBLISHED', label: 'Published' },
-    { key: 'SCHEDULED', label: 'Scheduled' },
-    { key: 'DRAFT', label: 'Draft' },
-    { key: 'ARCHIVED', label: 'Archived' },
-  ];
+  if (dbError) {
+    return (
+      <div className="category-empty" style={{ display: 'block' }}>
+        <p>⚠️ Database se connect nahi ho paya.</p>
+        <p style={{ fontSize: '0.8rem' }}>DATABASE_URL check karo — Supabase paused? Pooler URL?</p>
+      </div>
+    );
+  }
+
+  const maxCatViews = Math.max(1, ...catViews.map((c) => c.views));
+  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <>
+      {/* WELCOME HEADER */}
       <div className="admin-page-head">
         <div>
-          <h1>📄 All Articles <span className="admin-count-badge">{articles.length}</span></h1>
-          <p className="admin-page-sub">Search, filter, bulk publish/draft — sab yahin se</p>
+          <h1>📊 Dashboard</h1>
+          <p className="admin-page-sub">Welcome back, Jatin — aaj ka overview {today}</p>
         </div>
-        <Link className="admin-cta-btn" href="/admin/articles/new"><i className="fas fa-plus" /> New Article</Link>
+        <Link href="/admin/articles/new" className="admin-cta-btn">
+          <i className="fas fa-plus" /> New Article
+        </Link>
       </div>
 
-      {msg && <p className={`admin-msg ${msg.type === 'ok' ? 'ok' : 'err'}`}>{msg.text}</p>}
-
-      {/* TOOLBAR: search + status tabs */}
-      <div className="admin-toolbar">
-        <div className="admin-search">
-          <i className="fas fa-search" />
-          <input
-            value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title..."
-          />
-        </div>
-        <div className="admin-status-tabs">
-          {STATUS_TABS.map((t) => (
-            <button
-              key={t.key}
-              className={`admin-status-tab${status === t.key ? ' active' : ''}`}
-              onClick={() => setStatus(t.key)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+      {/* STAT CARDS */}
+      <div className="admin-stats-grid">
+        <StatCard label="Total Articles" value={stats.total} icon="fa-file-lines" grad="linear-gradient(135deg,#4f46e5,#7c3aed)" />
+        <StatCard label="Published" value={stats.published} icon="fa-circle-check" grad="linear-gradient(135deg,#10b981,#059669)" />
+        <StatCard label="Drafts" value={stats.drafts} icon="fa-pen" grad="linear-gradient(135deg,#f59e0b,#d97706)" />
+        <StatCard label="Total Views" value={stats.views} icon="fa-eye" grad="linear-gradient(135deg,#06b6d4,#0891b2)" />
+        <StatCard label="Categories" value={stats.categories} icon="fa-folder-tree" grad="linear-gradient(135deg,#f43f5e,#e11d48)" />
+        <StatCard label="Comments" value={stats.comments} icon="fa-comments" grad="linear-gradient(135deg,#8b5cf6,#6d28d9)" hint={stats.comments === 0 ? 'npx prisma db push ke baad live' : undefined} />
       </div>
 
-      {/* BULK BAR */}
-      {selected.size > 0 && (
-        <div className="admin-bulk-bar">
-          <span className="admin-bulk-count">{selected.size} selected</span>
-          <button onClick={() => bulk('PUBLISHED')} className="admin-bulk-btn pub"><i className="fas fa-circle-check" /> Publish</button>
-          <button onClick={() => bulk('DRAFT')} className="admin-bulk-btn draft"><i className="fas fa-pen" /> Draft</button>
-          <button onClick={() => bulk('DELETE')} className="admin-bulk-btn del"><i className="fas fa-trash" /> Delete</button>
-          <select
-            value={bulkCat}
-            onChange={(e) => setBulkCat(Number(e.target.value))}
-            style={{ padding: '7px 12px', border: '1px solid var(--border)', borderRadius: 16, background: 'var(--card-bg)', color: 'var(--text-dark)', fontSize: '0.75rem', fontWeight: 700 }}
-          >
-            <option value={0}>→ Change Category...</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          {bulkCat > 0 && (
-            <button onClick={bulkCategory} className="admin-bulk-btn" style={{ background: 'var(--primary)', color: '#fff' }}>
-              <i className="fas fa-arrows-rotate" /> Apply
-            </button>
+      {/* QUICK ACTIONS */}
+      <div className="admin-quick-actions">
+        <Link href="/admin/articles" className="admin-quick-btn"><i className="fas fa-file-lines" /> Manage Articles</Link>
+        <Link href="/admin/categories" className="admin-quick-btn"><i className="fas fa-folder-tree" /> Categories</Link>
+        <Link href="/admin/analytics" className="admin-quick-btn"><i className="fas fa-chart-line" /> Analytics</Link>
+        <Link href="/admin/articles/new" className="admin-quick-btn primary"><i className="fas fa-pen-to-square" /> Write New Post</Link>
+      </div>
+
+      <div className="admin-dash-grid">
+        {/* RECENTLY UPDATED */}
+        <div className="admin-panel">
+          <div className="admin-panel-head">
+            <h2><i className="fas fa-clock-rotate-left" /> Recently Updated</h2>
+            <Link href="/admin/articles" className="admin-panel-link">View all <i className="fas fa-arrow-right" /></Link>
+          </div>
+          {recent.length === 0 ? (
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-light)', padding: 10 }}>
+              Abhi koi article nahi — <Link href="/admin/articles/new">nayi post banao</Link>!
+            </p>
+          ) : (
+            <div className="admin-list">
+              {recent.map((a, i) => (
+                <Link key={a.id} href={`/admin/articles/${a.id}/edit`} className="admin-list-row">
+                  <span className="admin-list-rank">{i + 1}</span>
+                  <span className="admin-list-title">{a.title.slice(0, 60)}</span>
+                  {a.category && <span className="admin-chip">{a.category.name}</span>}
+                  <span className={`admin-status-pill ${a.status === 'PUBLISHED' ? 'pub' : 'draft'}`}>
+                    {a.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT'}
+                  </span>
+                </Link>
+              ))}
+            </div>
           )}
         </div>
-      )}
 
-      {loading && (
-        <div className="admin-panel" style={{ padding: 24, textAlign: 'center', color: 'var(--text-light)' }}>
-          <i className="fas fa-spinner fa-spin" style={{ marginRight: 8 }} /> Loading articles...
-        </div>
-      )}
-
-      {!loading && (
-        <div className="admin-panel" style={{ padding: 0, overflowX: 'auto' }}>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th style={{ width: 40 }}>
-                  <input
-                    type="checkbox"
-                    className="admin-check"
-                    onChange={(e) => {
-                      if (e.target.checked) setSelected(new Set(articles.map((a) => a.id)));
-                      else setSelected(new Set());
-                    }}
-                  />
-                </th>
-                <th>Title</th>
-                <th>Category</th>
-                <th>Status</th>
-                <th>Views</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {articles.map((a) => (
-                <tr key={a.id} className={selected.has(a.id) ? 'selected' : ''}>
-                  <td><input type="checkbox" className="admin-check" checked={selected.has(a.id)} onChange={() => toggle(a.id)} /></td>
-                  <td className="admin-title-cell">
-                    <Link href={`/admin/articles/${a.id}/edit`}>{a.title.slice(0, 55)}</Link>
-                    <div className="admin-slug">/{a.category?.slug || 'post'}/{a.slug}</div>
-                  </td>
-                  <td>{a.category ? <span className="admin-chip">{a.category.name}</span> : <span className="admin-chip muted">—</span>}</td>
-                  <td>
-                    <span className={`admin-status-pill ${a.status === 'PUBLISHED' ? 'pub' : a.status === 'DRAFT' ? 'draft' : 'arch'}`}>
-                      {a.status}
-                    </span>
-                  </td>
-                  <td><span className="admin-views-badge"><i className="fas fa-eye" /> {a.viewCount.toLocaleString()}</span></td>
-                  <td className="admin-row-actions">
-                    <Link href={`/admin/articles/${a.id}/edit`} title="Edit"><i className="fas fa-pen" /></Link>
-                    <a href={`/${a.category?.slug || 'post'}/${a.slug}`} target="_blank" rel="noopener" title="View live"><i className="fas fa-external-link" /></a>
-                    <button onClick={() => del(a.id)} title="Delete"><i className="fas fa-trash" /></button>
-                  </td>
-                </tr>
+        {/* VIEWS PER CATEGORY */}
+        <div className="admin-panel">
+          <div className="admin-panel-head">
+            <h2><i className="fas fa-chart-simple" /> Views by Category</h2>
+          </div>
+          {catViews.length === 0 ? (
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-light)', padding: 10 }}>Abhi data nahi.</p>
+          ) : (
+            <div className="admin-bars">
+              {catViews.map((c) => (
+                <div key={c.slug} className="admin-bar-row">
+                  <span className="admin-bar-label">{c.name}</span>
+                  <div className="admin-bar-track">
+                    <div className="admin-bar-fill" style={{ width: `${Math.max(4, (c.views / maxCatViews) * 100)}%` }} />
+                  </div>
+                  <span className="admin-bar-value">{c.views.toLocaleString()}</span>
+                </div>
               ))}
-              {articles.length === 0 && (
-                <tr><td colSpan={6} style={{ padding: 28, textAlign: 'center', color: 'var(--text-light)' }}>
-                  😕 Koi article nahi mila — filter/search change karke dekho.
-                </td></tr>
-              )}
-            </tbody>
-          </table>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* RECENT COMMENTS */}
+        <div className="admin-panel">
+          <div className="admin-panel-head">
+            <h2><i className="fas fa-comments" /> Recent Comments</h2>
+            {stats.comments === 0 && <span className="admin-chip">table pending</span>}
+          </div>
+          {stats.comments === 0 ? (
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-light)', padding: 10, lineHeight: 1.7 }}>
+              Comment table abhi nahi bani hai. Project folder mein ek baar chalao:<br />
+              <code style={{ background: 'var(--bg)', padding: '3px 8px', borderRadius: 6, fontSize: '0.78rem' }}>npx prisma db push</code>
+            </p>
+          ) : recentComments.length === 0 ? (
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-light)', padding: 10 }}>Abhi koi comment nahi aaya.</p>
+          ) : (
+            <div className="admin-list">
+              {recentComments.map((c) => (
+                <div key={c.id} className="admin-comment-row">
+                  <span className="admin-comment-avatar">💬</span>
+                  <div className="admin-comment-body">
+                    <div className="admin-comment-top">
+                      <b>{c.name}</b>
+                      <span className="admin-comment-date">
+                        {new Date(c.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      </span>
+                    </div>
+                    <div className="admin-comment-text">{c.content.slice(0, 90)}{c.content.length > 90 ? '…' : ''}</div>
+                    {c.article && (
+                      <a
+                        className="admin-comment-link"
+                        href={`/${c.article.category?.slug || 'post'}/${c.article.slug}`}
+                        target="_blank"
+                        rel="noopener"
+                      >
+                        on: {c.article.title.slice(0, 40)}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </>
   );
 }

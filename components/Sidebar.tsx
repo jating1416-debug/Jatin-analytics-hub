@@ -303,21 +303,40 @@ function ReadingListWidget() {
 
 // QUOTE OF DAY - client component (din ke hisaab se)
 function QuoteOfDay() {
+  // JATIN KE QUOTES - 25 apne quotes, har din ek naya (daily rotate)
   const QUOTES = [
-    ['Data is the new oil, but analytics is the engine.', '— Anonymous'],
-    ["Without data, you're just another person with an opinion.", '— W. Edwards Deming'],
-    ['In God we trust. All others must bring data.', '— W. Edwards Deming'],
-    ['The goal is to turn data into information, and information into insight.', '— Carly Fiorina'],
-    ['Numbers have an important story to tell. They rely on you to give them a voice.', '— Stephen Few'],
-    ['Errors using inadequate data are less than those using no data at all.', '— Charles Babbage'],
+    'Data sirf numbers nahi, sahi decision ki kahani hoti hai.',
+    'Jab data bolta hai, assumptions ko chup rehna padta hai.',
+    'Good analysts data ko read nahi karte, data ko understand karte hain.',
+    'Har dataset ke andar ek story hoti hai, bas analyst ko use find karna aana chahiye.',
+    'Clean data se better analysis aur better analysis se better decisions aate hain.',
+    'Data Analytics ka goal numbers dikhana nahi, insights dikhana hai.',
+    'SQL data nikal sakta hai, lekin insight analyst nikalta hai.',
+    'Dashboard tab useful hai jab woh sirf beautiful nahi, actionable bhi ho.',
+    'Data mein pattern dhoondhna analysis hai, pattern ka meaning samajhna intelligence hai.',
+    'Har number ek question ka answer nahi hota; kabhi-kabhi woh ek naya question hota hai.',
+    'Bad data se beautiful dashboard bhi bad decision de sakta hai.',
+    'Data cleaning boring lag sakti hai, lekin accurate analysis wahi se start hota hai.',
+    'Excel ho, SQL ho ya Python — tool important nahi, problem solve karna important hai.',
+    'Jo data ko question karna seekh gaya, woh analysis karna seekh gaya.',
+    'Numbers ko visualize karo, patterns ko identify karo, aur decisions ko improve karo.',
+    'Analytics mein sabse powerful skill ek achha question poochna hai.',
+    'Data tumhe batata hai kya hua, analysis tumhe samjhata hai kyun hua.',
+    'A good dashboard answers questions before the user asks them.',
+    'Data analyst ka kaam report banana nahi, clarity create karna hai.',
+    'Jitna better data samjhoge, utne better decisions loge.',
+    'Trend dekhna easy hai, trend ke peeche ki story samajhna real analytics hai.',
+    'Numbers kabhi lie nahi bolte, lekin unki interpretation galat ho sakti hai.',
+    'Data ko clean karo, context do, visualize karo — tab insight valuable banti hai.',
+    'Analytics ka real value tab hai jab insight action mein convert ho.',
+    'Learn the tools, understand the data, solve the problem.',
   ];
   const day = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
-  const [q, a] = QUOTES[day % QUOTES.length];
+  const q = QUOTES[day % QUOTES.length];
   return (
     <div className="sidebar-widget" style={{ textAlign: 'center' }}>
       <div className="widget-title"><i className="fas fa-quote-left" /> Quote of the Day</div>
       <p style={{ fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6, marginBottom: 6 }}>“{q}”</p>
-      <span style={{ fontSize: '0.75rem', color: 'var(--text-light)', fontWeight: 600 }}>{a}</span>
     </div>
   );
 }
