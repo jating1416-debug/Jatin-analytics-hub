@@ -154,19 +154,118 @@ interface PipeTableInfo {
   rows: string[][];
 }
 
+// ============================================================
+// UNIVERSAL TABLE PARSER - 3 formats:
+//  1) UNICODE:  │ cells + ──┼── separators (Blogger feed)
+//  2) ASCII:    | cells  +------+------+  (MySQL CLI / markdown)
+//  3) DOUBLE:   ║ cells  ╠═══╦═══╣  (Excel UI mockups)
+// Markdown **bold** / stray * markers bhi strip hote hain.
+// ============================================================
+function detectTableType(text: string): 'unicode' | 'ascii' | 'double' | null {
+  // double-line box (╔═╦═╗)
+  if (/[╔╠╚╗╣╝]/.test(text) && text.includes('║')) return 'double';
+  // unicode (┼ junction) - box diagrams (┌┐└┘├┤) exclude
+  if (text.includes('│') && text.includes('┼') && !/[┌┐└┘├┤]/.test(text)) return 'unicode';
+  // ascii: +---+ borders (ya markdown |-|-|) with | cells
+  if ((/\+[-+=]+\+/.test(text) || /\|[-|: ]+\|/.test(text)) && text.includes('|')) return 'ascii';
+  return null;
+}
+
+function stripMarkdown(s: string): string {
+  return s.replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '').replace(/\*/g, '').trim();
+}
+
+// ASCII (+---+) aur DOUBLE (╔═╦═╗) tables - line-based parse
+function parseAsciiDoubleTable(text: string, type: 'ascii' | 'double'): { label: string; note: string; tables: PipeTableInfo[] } | null {
+  const sepChar = type === 'double' ? '║' : '|';
+  const borderRe = type === 'double'
+    ? /^[╔╠╚][═╦╬╩]*[╗╣╝]$/
+    : /^(\+[-+=]+\+|\|[-|: ]+\|)$/;
+  const junctionCount = (l: string): number => {
+    if (type === 'double') return (l.match(/[╦╬]/g) || []).length + 1;
+    if (l.startsWith('+')) return (l.match(/\+/g) || []).length - 1;
+    return (l.match(/\|/g) || []).length - 1;
+  };
+
+  // ASCII: feed ne newlines kha di thin -> border ke aas-paas reconstruct
+  if (type === 'ascii') {
+    text = text
+      .replace(/(\S)\s+(?=\+[-+=]+\+)/g, '$1\n')   // border se pehle
+      .replace(/(\+[-+=]+\+)\s+/g, '$1\n');          // border ke baad
+  }
+  let lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  if (lines.length < 2) return null;
+
+  // ASCII: kuch lines mein border+header fused ("*-------+ | Cell |") - border fragment hatao
+  if (type === 'ascii') {
+    lines = lines.map((l) => /^[*+\-=]+\s*\|/.test(l) ? l.replace(/^[*+\-=]+\s*/, '') : l);
+  }
+
+  let label = '';
+  let note = '';
+  let headerCells: string[] = [];
+  let nCols = 0;
+  const rows: string[][] = [];
+  let cellBuffer: string[] = [];
+  let headerFound = false;
+  let multiSepSeen = false;
+
+  for (const raw of lines) {
+    if (borderRe.test(raw)) {
+      if (junctionCount(raw) >= 2) multiSepSeen = true;
+      continue;
+    }
+    if (!raw.includes(sepChar)) {
+      const clean = stripMarkdown(raw).replace(/←.*$/, '');
+      if (!headerFound) label = (label ? label + ' ' : '') + clean;
+      else note = (note ? note + ' ' : '') + clean;
+      continue;
+    }
+    // trailing note: line sepChar pe khatam NAHI hota to last part note hai
+    // ("║ Salary ║ ← Bold, White text" -> note = "← Bold...")
+    let trailing = '';
+    let endsWithSep = raw.trimEnd().endsWith(sepChar);
+    const parts = raw.split(sepChar).map((c) => stripMarkdown(c));
+    if (!endsWithSep && parts.length > 1) trailing = (parts.pop() || '').trim();
+    const cells = parts.filter(Boolean);
+    if (!headerFound) {
+      if (cells.length <= 1 && !multiSepSeen) {
+        label = (label ? label + ' ' : '') + (cells[0] || '').replace(/←.*$/, '');
+        continue;
+      }
+      headerCells = expandHeaderCells(cells, Math.max(cells.length, 2)).slice(0, 30);
+      nCols = headerCells.length;
+      if (nCols < 2) return null;
+      headerFound = true;
+      continue;
+    }
+    // CELL BUFFER: rows kabhi split ho sakti hain (fused "| UPDATE |" agli
+    // line pe) -> saare cells buffer mein, nCols ke chunks banate jao
+    cellBuffer.push(...cells);
+    while (cellBuffer.length >= nCols) {
+      rows.push(cellBuffer.splice(0, nCols));
+    }
+    if (trailing) note = (note ? note + ' ' : '') + trailing;
+  }
+
+  if (!headerFound || rows.length === 0) return null;
+  if (cellBuffer.length) note = (note ? note + ' ' : '') + cellBuffer.join(' ');
+  return { label, note, tables: [{ label: '', note: '', headers: headerCells, rows }] };
+}
+
 function parsePipeTable(text: string): { label: string; note: string; tables: PipeTableInfo[] } | null {
-  // ASCII '|' separators ko bhi handle karo (sirf table blocks mein -
-  // jab ─ separator line ho to hi convert, SQL bitwise | nahi tootega)
+  const type = detectTableType(text);
+  if (!type) return null;
+  if (type !== 'unicode') return parseAsciiDoubleTable(text, type);
+
+  // ---- UNICODE path (existing, tested) ----
   let text2 = text;
   if (!text.includes('│') && /─/.test(text) && text.includes(' | ')) {
     text2 = text.replace(/ \| /g, ' │ ');
   }
   text = text2;
   if (!text.includes('│')) return null;
-  // BOX-DRAWING DIAGRAMS (┌─┐├┤└┘ Excel/flowchart mockups) -> convert NAHI
-  // (inme ┼ bhi hota hai par ye data table nahi hain - monospace hi sahi)
   if (/[┌┐└┘├┤]/.test(text)) return null;
-  // ASLI table tabhi hai jab ┼ junction ho (separator line)
   if (!text.includes('┼')) return null;
 
   // ---- 1) lines banane ka try ----
@@ -340,7 +439,7 @@ export function pipeTablesToHtml(content: string): string {
       .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
       .replace(/&amp;/g, '&');
-    if (!text.includes('│') || !/─/.test(text)) return whole;
+    if (!detectTableType(text)) return whole;
 
     const parsed = parsePipeTable(text);
     if (!parsed) return whole;

@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Vercel function limit - 504 kabhi nahi
 
 // CDN cache 60s -> PostList repeat visits pe INSTANT
-const CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' };
+const CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=600' };
 
 export async function GET(req: NextRequest) {
   // SCHEDULED POSTS - jinki time aa gayi, unhe publish karo (fire & forget)

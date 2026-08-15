@@ -116,5 +116,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!(await isAdmin())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
   await prisma.article.delete({ where: { id: Number(id) } });
+  try {
+    revalidatePath('/', 'layout');
+    revalidatePath('/archive');
+    revalidatePath('/search');
+  } catch (e) { console.error('revalidate DELETE:', e); }
   return NextResponse.json({ ok: true });
 }

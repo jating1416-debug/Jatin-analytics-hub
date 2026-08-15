@@ -93,6 +93,13 @@ export async function POST(req: NextRequest) {
         tags: { create: tagConnects },
       },
     });
+    // PURGE CACHE - naya publish TURANT home/category pe dikhe (10 min ka wait khatam)
+    try {
+      revalidatePath('/', 'layout');
+      revalidatePath('/archive');
+      revalidatePath('/search');
+    } catch (e) { console.error('revalidate POST:', e); }
+
     // GSC - nayi post publish pe Google/Bing sitemap ping (fire & forget)
     if (article.status === 'PUBLISHED') {
       try {
